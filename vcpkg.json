@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "overlay-media-controller",
+  "version": "0.1.0",
+  "description": "C++ overlay media controller with FFmpeg, SQLite, and HTTP API",
+  "dependencies": [
+    {
+      "name": "ffmpeg",
+      "features": ["avcodec", "avformat", "swscale"]
+    },
+    "sqlite3",
+    "cpp-httplib"
+  ]
+}
