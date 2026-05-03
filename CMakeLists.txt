@@ -11,22 +11,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # ---------------------------------------------------------------------------
-# Dependencies
+# Dependencies (vcpkg style)
 # ---------------------------------------------------------------------------
 
-find_package(PkgConfig REQUIRED)
-
-# FFmpeg (libavcodec, libavformat, libavutil, libswscale)
-pkg_check_modules(AVCODEC  REQUIRED IMPORTED_TARGET libavcodec)
-pkg_check_modules(AVFORMAT REQUIRED IMPORTED_TARGET libavformat)
-pkg_check_modules(AVUTIL   REQUIRED IMPORTED_TARGET libavutil)
-pkg_check_modules(SWSCALE  REQUIRED IMPORTED_TARGET libswscale)
-
-# SQLite3
-find_package(SQLite3 REQUIRED)
-
-# cpp-httplib
-pkg_check_modules(HTTPLIB REQUIRED IMPORTED_TARGET cpp-httplib)
+find_package(httplib CONFIG REQUIRED)
+find_package(unofficial-sqlite3 CONFIG REQUIRED)
+find_package(FFMPEG REQUIRED)
 
 # ---------------------------------------------------------------------------
 # Executable
@@ -41,15 +31,13 @@ add_executable(overlay-media-controller
 
 target_include_directories(overlay-media-controller PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${FFMPEG_INCLUDE_DIRS}
 )
 
 target_link_libraries(overlay-media-controller PRIVATE
-    PkgConfig::AVCODEC
-    PkgConfig::AVFORMAT
-    PkgConfig::AVUTIL
-    PkgConfig::SWSCALE
-    SQLite::SQLite3
-    PkgConfig::HTTPLIB
+    httplib::httplib
+    unofficial::sqlite3::sqlite3
+    ${FFMPEG_LIBRARIES}
 )
 
 # ---------------------------------------------------------------------------
