@@ -1,4 +1,14 @@
-#include "api_server.hpp"
+#include "core/application/OverlayMediaController.hpp"
+
+int main(int argc, char* argv[])
+{
+    omc::application::OverlayMediaController controller;
+    controller.initialize();
+    return 0;
+}
+
+
+/*#include "api_server.hpp"
 #include "database.hpp"
 #include "media_controller.hpp"
 
@@ -37,3 +47,4 @@ int main(int argc, char* argv[])
 
     return 0;
 }
+*/
