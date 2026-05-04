@@ -2,15 +2,18 @@
 
 #include "infra/window/SDLRenderer.hpp"
 
+#include <stdio.h>
+
 namespace omc::ui
 {
 	void UiManager::render()
 	{
+		std::vector<DrawCommand> drawCommands;
 		for (const auto& window : windows) {
-			window->render();
+			window->buildDrawCommand(drawCommands);
 		}
 
-		renderer.render();
+		renderer.render(drawCommands);
 	}
 
 	void UiManager::update()
