@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/event/EventBus.hpp"
+#include "modules/ui/UiManager.hpp"
 
 namespace omc::application
 {
@@ -8,10 +9,13 @@ namespace omc::application
 	{
 	public:
 		void initialize();
+		void close();
 
 	private:
 		bool running{ false };
 
 		omc::event::EventBus eventBus;
+
+		omc::ui::UiManager uiManager{ eventBus };
 	};
 }

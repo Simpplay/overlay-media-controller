@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "core/event/EventBus.hpp"
-#include "core/event/events/PlayMediaRequestedEvent.cpp"
+#include "core/event/events/PlayMediaRequestedEvent.hpp"
 
 TEST(EventBusTest, BasicDispatch) {
     omc::event::EventBus bus;

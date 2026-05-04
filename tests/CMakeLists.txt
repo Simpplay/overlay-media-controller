@@ -1,5 +1,7 @@
 enable_testing()
 
+include(CTest)
+
 add_executable(EventBusTests
     core/event/EventBusTest.cpp
 )

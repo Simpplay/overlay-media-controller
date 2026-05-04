@@ -22,7 +22,7 @@ namespace omc::event
 		{
 			auto wrapper = [handler](const Event& e) {
 				handler(static_cast<const T&>(e));
-				};
+			};
 
 			subscribers[std::type_index(typeid(T))].push_back(wrapper);
 		}
