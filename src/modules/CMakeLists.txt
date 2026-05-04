@@ -1,6 +1,6 @@
 add_library(modules
 	Modules.cpp
-)
+ "media/MediaManager.cpp")
 
 add_subdirectory(input)
 add_subdirectory(media)

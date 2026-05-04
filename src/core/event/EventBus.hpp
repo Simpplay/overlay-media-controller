@@ -18,7 +18,15 @@ namespace omc::event
 	{
 	public:
 		template<typename T>
-		void subscribe(std::function<void(const T&)> handler);
+		void subscribe(std::function<void(const T&)> handler)
+		{
+			auto wrapper = [handler](const Event& e) {
+				handler(static_cast<const T&>(e));
+				};
+
+			subscribers[std::type_index(typeid(T))].push_back(wrapper);
+		}
+
 		void emit(const omc::event::Event& event);
 		void post(std::unique_ptr<omc::event::Event>);
 
