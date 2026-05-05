@@ -369,6 +369,20 @@ namespace omc::infra
         vertices.insert(vertices.end(), { v0, v1, v2, v2, v1, v3 });
     }
 
+    omc::ui::RectCmd TextToRect(const omc::ui::TextCmd& cmd)
+    {
+        const float glyphWidth = 8.0f;
+        const float glyphHeight = 16.0f;
+        const float width = (std::max)(8.0f, glyphWidth * static_cast<float>(cmd.text.size()));
+        return omc::ui::RectCmd{ omc::ui::Rect(cmd.position, { width, glyphHeight }), cmd.color, cmd.zIndex };
+    }
+
+    omc::ui::RectCmd ImageToRect(const omc::ui::ImageCmd& cmd)
+    {
+        const uint8_t tint = static_cast<uint8_t>(80 + (cmd.imageId % 3) * 50);
+        return omc::ui::RectCmd{ omc::ui::Rect(cmd.position, cmd.size), { tint, static_cast<uint8_t>(tint + 30), 220, 255 }, cmd.zIndex };
+    }
+
     // =========================================================
     // Win32Renderer Implementation
     // =========================================================
@@ -435,9 +449,9 @@ namespace omc::infra
         std::vector<omc::ui::RectCmd> rects;
 
         for (const auto& draw : drawCommands) {
-            if (auto r = std::get_if<omc::ui::RectCmd>(&draw)) {
-                rects.push_back(*r);
-            }
+            if (auto r = std::get_if<omc::ui::RectCmd>(&draw)) rects.push_back(*r);
+            if (auto t = std::get_if<omc::ui::TextCmd>(&draw)) rects.push_back(TextToRect(*t));
+            if (auto i = std::get_if<omc::ui::ImageCmd>(&draw)) rects.push_back(ImageToRect(*i));
         }
 
         std::sort(rects.begin(), rects.end(), [](auto& a, auto& b) {
