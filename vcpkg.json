@@ -9,7 +9,6 @@
       "features": [ "avcodec", "avformat", "swscale" ]
     },
     "sqlite3",
-    "cpp-httplib",
     "gtest"
   ]
 }

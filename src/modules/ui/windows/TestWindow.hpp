@@ -122,8 +122,8 @@ namespace omc::ui::window
 			}
 
 			if (mouseDown && isResizing && !isMaximized) {
-				size.x = std::max(180.0f, resizeAnchorSize.x + (mouse.x - resizeAnchorMouse.x));
-				size.y = std::max(120.0f, resizeAnchorSize.y + (mouse.y - resizeAnchorMouse.y));
+				size.x = (std::max)(180.0f, resizeAnchorSize.x + (mouse.x - resizeAnchorMouse.x));
+				size.y = (std::max)(120.0f, resizeAnchorSize.y + (mouse.y - resizeAnchorMouse.y));
 			}
 
 			if (justReleased) {
