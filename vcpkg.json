@@ -8,7 +8,6 @@
       "name": "ffmpeg",
       "features": [ "avcodec", "avformat", "swscale" ]
     },
-    "sdl3",
     "sqlite3",
     "cpp-httplib",
     "gtest"

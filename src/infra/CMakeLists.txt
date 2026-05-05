@@ -1,5 +1,5 @@
 add_library(infra
-    "window/SDLRenderer.cpp"
+    "window/Win32Renderer.cpp"
  "window/SDLRenderer.hpp")
 
 target_include_directories(infra PUBLIC
@@ -7,5 +7,5 @@ target_include_directories(infra PUBLIC
 )
 
 target_link_libraries(infra 
-    PUBLIC SDL3::SDL3
+    PUBLIC d3d11 dxgi
 )

@@ -1,8 +1,7 @@
 #pragma once
 
 #include <vector>
-#include <stdlib.h>
-#include <time.h>
+#include <random>
 
 #include "modules/ui/UiWindow.hpp"
 #include "modules/ui/UiTypes.hpp"
@@ -15,21 +14,26 @@ namespace omc::ui::window
 		omc::ui::Vec2 position;
 		omc::ui::Color backgroundColor;
 		omc::ui::Vec2 size;
-		
 
-		TestWindow() : backgroundColor({ 255, 0, 0, 128 }), size({ 200, 150 }), position({ 100, 100 })
+		TestWindow()
 		{
-			srand(time(NULL));
+			static std::mt19937 rng(std::random_device{}());
 
-			position.x = static_cast<float>(rand() % 400 + 50);
-			position.y = static_cast<float>(rand() % 300 + 50);
+			std::uniform_int_distribution<int> posX(50, 449);
+			std::uniform_int_distribution<int> posY(50, 349);
+			std::uniform_int_distribution<int> color(0, 255);
+			std::uniform_int_distribution<int> sizeX(100, 299);
+			std::uniform_int_distribution<int> sizeY(75, 224);
 
-			backgroundColor.r = static_cast<uint8_t>(rand() % 256);
-			backgroundColor.g = static_cast<uint8_t>(rand() % 256);
-			backgroundColor.b = static_cast<uint8_t>(rand() % 256);
+			position.x = posX(rng);
+			position.y = posY(rng);
 
-			size.x = static_cast<float>(rand() % 200 + 100);
-			size.y = static_cast<float>(rand() % 150 + 75);
+			backgroundColor.r = color(rng);
+			backgroundColor.g = color(rng);
+			backgroundColor.b = color(rng);
+
+			size.x = sizeX(rng);
+			size.y = sizeY(rng);
 		}
 
 		void update() override

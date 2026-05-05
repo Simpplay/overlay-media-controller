@@ -7,7 +7,7 @@
 #include "core/event/events/WindowOpenRequestedEvent.hpp"
 #include "UiWindow.hpp"
 #include "UiTypes.hpp"
-#include "infra/window/SDLRenderer.hpp"
+#include "infra/window/Win32Renderer.hpp"
 
 #include "modules/ui/windows/TestWindow.hpp"
 
@@ -31,11 +31,8 @@ namespace omc::ui
 			int numTestWindows = 5;
 
 			for (int i = 0; i < numTestWindows; ++i) {
-				omc::ui::window::TestWindow testWindow;
-				windows.push_back(std::make_unique<omc::ui::window::TestWindow>(testWindow));
+				eventBus.emit(omc::event::WindowOpenRequestedEvent(typeid(omc::ui::window::TestWindow)));
 			}
-
-			printf("UiManager initialized with %d test windows.\n", static_cast<int>(windows.size()));
 		}
 
 		void render();
@@ -46,6 +43,6 @@ namespace omc::ui
 		std::vector<std::unique_ptr<omc::ui::window::UiWindow>> windows;
 
 		omc::event::EventBus& eventBus;
-		omc::infra::SDLRenderer renderer;
+		omc::infra::Win32Renderer renderer;
 	};
 }

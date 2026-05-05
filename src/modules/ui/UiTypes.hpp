@@ -35,12 +35,14 @@ namespace omc::ui
 	struct RectCmd {
 		Rect rect;
 		Color color;
+		int zIndex;
 	};
 
 	struct TextCmd {
 		Vec2 position;
 		Color color;
 		std::string text;
+		int zIndex;
 	};
 
 	struct ImageCmd {
@@ -48,6 +50,7 @@ namespace omc::ui
 		Vec2 size;
 		// placeholder para recurso gráfico (id, handle, etc.)
 		int imageId{ 0 };
+		int zIndex;
 	};
 
 	using DrawCommand = std::variant<RectCmd, TextCmd, ImageCmd>;
