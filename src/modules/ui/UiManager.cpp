@@ -24,11 +24,7 @@ namespace omc::ui
 		}
 
 		windows.erase(std::remove_if(windows.begin(), windows.end(), [](const auto& window) {
-			if (auto testWindow = dynamic_cast<omc::ui::window::TestWindow*>(window.get())) {
-				return testWindow->closed();
-			}
-
-			return false;
+			return window->closed();
 		}), windows.end());
 
 		renderer.update();
