@@ -7,8 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Optional external dependencies.
-# This keeps the project configurable on environments where vcpkg (or the
-# corresponding system packages) are not preinstalled.
 find_package(unofficial-sqlite3 CONFIG QUIET)
 find_package(FFMPEG QUIET)
 find_package(GTest CONFIG QUIET)

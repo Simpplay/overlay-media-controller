@@ -4,46 +4,55 @@
 
 namespace omc::infra {
 
-	FfmpegMediaPlayer::FfmpegMediaPlayer() {
-		av_log_set_level(AV_LOG_INFO);
-	}
+    FfmpegMediaPlayer::FfmpegMediaPlayer() {
+        av_log_set_level(AV_LOG_INFO);
+    }
 
-	FfmpegMediaPlayer::~FfmpegMediaPlayer() {
-		
-	}
+    FfmpegMediaPlayer::~FfmpegMediaPlayer() = default;
 
-	bool FfmpegMediaPlayer::load(const std::string& path) {
-		auto pathStr = path.c_str();
+    bool FfmpegMediaPlayer::load(const std::string& path) {
+        fmt_ctx.reset();
 
-		if (avformat_open_input(&fmt_ctx, pathStr, nullptr, nullptr) < 0) {
-			printf("Error: Could not open file: %s\n", pathStr);
-			return false;
-		}
+        auto pathStr = path.c_str();
 
-		if (avformat_find_stream_info(fmt_ctx, nullptr) < 0) {
-			printf("Error: Could not find stream information for: %s\n", pathStr);
-			avformat_close_input(&fmt_ctx);
-			fmt_ctx = nullptr;
-			return false;
-		}
+        AVFormatContext* rawCtx = nullptr;
 
-		return true;
-	}
+        if (avformat_open_input(&rawCtx, pathStr, nullptr, nullptr) < 0) {
+            printf("Error: Could not open file: %s\n", pathStr);
+            return false;
+        }
 
-	void FfmpegMediaPlayer::play() {
-		if (fmt_ctx == nullptr) {
-			printf("Error: Load a file first!");
-			return;
-		}
+        if (avformat_find_stream_info(rawCtx, nullptr) < 0) {
+            printf("Error: Could not find stream information for: %s\n", pathStr);
+            avformat_close_input(&rawCtx);
+            return false;
+        }
 
+        // Transfer ownership al unique_ptr
+        fmt_ctx.reset(rawCtx);
 
-	}
+        return true;
+    }
 
-	void FfmpegMediaPlayer::pause() {
-		
-	}
+    void FfmpegMediaPlayer::play() {
+        if (!fmt_ctx) {
+            printf("Error: Load a file first!");
+            return;
+        }
 
-	void FfmpegMediaPlayer::stop() {
-		
-	}
+        // Acceso con get()
+        AVFormatContext* ctx = fmt_ctx.get();
+
+        // TODO
+    }
+
+    void FfmpegMediaPlayer::pause() {
+        // TODO
+    }
+
+    void FfmpegMediaPlayer::stop() {
+        // Al resetear, se libera automáticamente vía deleter
+        fmt_ctx.reset();
+    }
+
 }

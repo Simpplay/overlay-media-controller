@@ -462,6 +462,7 @@ namespace omc::infra
 
         if (vertices.empty()) {
             m_pimpl->g_swapChain->Present(1, 0);
+			m_pimpl->g_hitTest.setRegions({});
             return;
         }
 

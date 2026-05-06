@@ -15,6 +15,7 @@ namespace omc::ui::window
 	{
 	public:
 		virtual ~UiWindow() = default;
+		virtual std::unique_ptr<UiWindow> clone() const = 0;
 
 		virtual void update() = 0;
 		virtual void buildDrawCommand(std::vector<DrawCommand>& out)
@@ -29,10 +30,32 @@ namespace omc::ui::window
 
 			buildClientDrawCommand(out);
 		}
+
+		bool canInteractWithWindow() const
+		{
+#if defined(_WIN32)
+			POINT cursor{};
+			GetCursorPos(&cursor);
+			return !isClosed && pointInRect({ static_cast<float>(cursor.x), static_cast<float>(cursor.y) }, { position, size });
+#endif
+			return !isClosed;
+		}
+
+		virtual void updateWindowInteraction()
+		{
+			updateWindowTaskBar();
+		}
+
+		bool isInteractingWithTitleBar() const
+		{
+			return isDragging || isResizing;
+		}
+
 		virtual void buildClientDrawCommand(std::vector<DrawCommand>& out) = 0;
 		virtual bool hasTitlebar() const { return true; }
 		bool closed() const { return isClosed; }
 		void setZBase(int z) { zBase = z; }
+		int getZBase() const { return zBase; }
 
 		Vec2 position;
 		Vec2 size;
@@ -55,7 +78,9 @@ namespace omc::ui::window
 		static constexpr float kButtonSize = 20.0f;
 		static constexpr float kButtonPadding = 6.0f;
 
-		void updateWindowInteraction()
+
+
+		void updateWindowTaskBar()
 		{
 			if (isClosed || !hasTitlebar()) return;
 

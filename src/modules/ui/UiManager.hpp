@@ -11,6 +11,7 @@
 
 #include "modules/ui/windows/TestWindow.hpp"
 #include "modules/ui/windows/MediaWindow.hpp"
+#include "infra/media/FfmpegMediaPlayer.hpp"
 
 constexpr auto MAX_Z_INDEX_PER_WINDOW = 10;
 
@@ -36,10 +37,13 @@ namespace omc::ui
 			int numTestWindows = 2;
 
 			for (int i = 0; i < numTestWindows; ++i) {
-				eventBus.emit(omc::event::WindowOpenRequestedEvent(typeid(omc::ui::window::TestWindow)));
+				omc::ui::window::TestWindow testWindow;
+				eventBus.emit(omc::event::WindowOpenRequestedEvent(testWindow));
 			}
 
-			eventBus.emit(omc::event::WindowOpenRequestedEvent(typeid(omc::ui::window::MediaWindow)));
+			auto ffmpegPlayer = std::make_unique<omc::infra::FfmpegMediaPlayer>();
+			omc::ui::window::MediaWindow mediaWindow(*ffmpegPlayer, "C:\\Orgullo.mp4");
+			eventBus.emit(omc::event::WindowOpenRequestedEvent(mediaWindow));
 		}
 
 		void render();

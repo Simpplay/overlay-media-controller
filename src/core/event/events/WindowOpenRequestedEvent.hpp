@@ -1,16 +1,17 @@
 #pragma once
 
+#include <memory>
+
 #include "core/event/Event.hpp"
 #include "modules/ui/UiWindow.hpp"
-#include <string>
 
 namespace omc::event {
     class WindowOpenRequestedEvent : public Event {
     public:
-        WindowOpenRequestedEvent(const std::type_info& type)
-            : type(type) {
+        WindowOpenRequestedEvent(const omc::ui::window::UiWindow& window)
+            : window(window) {
         }
 
-        const std::type_info& type;
+        const omc::ui::window::UiWindow& window;
     };
 }

@@ -27,9 +27,14 @@ namespace omc::ui::window
 			backgroundColor = { static_cast<uint8_t>(color(rng)), static_cast<uint8_t>(color(rng)), static_cast<uint8_t>(color(rng)), 235 };
 		}
 
-		void update() override
+		void update() override 
 		{
-			updateWindowInteraction();
+
+		}
+
+		std::unique_ptr<UiWindow> clone() const override
+		{
+			return std::make_unique<TestWindow>(*this);
 		}
 
 		void buildClientDrawCommand(std::vector<omc::ui::DrawCommand>& out) override

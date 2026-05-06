@@ -9,7 +9,7 @@ add_executable(app
 )
 
 target_link_libraries(app
-    PRIVATE
+    PUBLIC
         modules
         core
         infra

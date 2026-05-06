@@ -1,23 +1,39 @@
 #pragma once
 
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
+#include <string>
+#include <memory>
 
-#include "modules/media/MediaPLayer.hpp"
+extern "C" {
+#include <libavformat/avformat.h>
+}
+
+#include "modules/media/MediaPlayer.hpp"
 
 namespace omc::infra {
-	class FfmpegMediaPlayer : omc::media::MediaPlayer {
 
-	public:
-		~FfmpegMediaPlayer();
-		FfmpegMediaPlayer();
+    class FfmpegMediaPlayer : public omc::media::MediaPlayer {
+    public:
+        FfmpegMediaPlayer();
+        ~FfmpegMediaPlayer() noexcept override;
 
-		bool load(const std::string& path) override;
-		void play() override;
-		void pause() override;
-		void stop() override;
+        FfmpegMediaPlayer(const FfmpegMediaPlayer&) = delete;
+        FfmpegMediaPlayer& operator=(const FfmpegMediaPlayer&) = delete;
 
-	private:
-		AVFormatContext* fmt_ctx = nullptr;
-	};
+        bool load(const std::string& path) override;
+        void play() override;
+        void pause() override;
+        void stop() override;
+
+    private:
+        struct AVFormatContextDeleter {
+            void operator()(AVFormatContext* ctx) const {
+                if (ctx) {
+                    avformat_close_input(&ctx);
+                }
+            }
+        };
+
+        std::unique_ptr<AVFormatContext, AVFormatContextDeleter> fmt_ctx;
+    };
+
 }
