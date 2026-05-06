@@ -5,6 +5,7 @@
 #include "core/event/EventBus.hpp"
 
 #include "core/event/events/WindowOpenRequestedEvent.hpp"
+#include "core/event/events/FrameReadyEvent.hpp"
 #include "UiWindow.hpp"
 #include "UiTypes.hpp"
 #include "infra/window/Win32Renderer.hpp"
@@ -13,7 +14,6 @@
 
 #include "modules/ui/windows/TestWindow.hpp"
 #include "modules/ui/windows/MediaWindow.hpp"
-#include "infra/media/FfmpegMediaPlayer.hpp"
 
 constexpr auto MAX_Z_INDEX_PER_WINDOW = 10;
 
@@ -26,6 +26,10 @@ namespace omc::ui
 		{
 			eventBus.subscribe<omc::event::WindowOpenRequestedEvent>([this](const omc::event::WindowOpenRequestedEvent& event) {
 				handleWindowOpenRequestedEvent(event);
+			});
+
+			eventBus.subscribe<omc::event::FrameReadyEvent>([this](const omc::event::FrameReadyEvent& event) {
+				handleFrameReadyEvent(event);
 			});
 
 			printf("UiManager initialized..\n");
@@ -52,6 +56,7 @@ namespace omc::ui
 		void update();
 
 	private:
+		void handleFrameReadyEvent(const omc::event::FrameReadyEvent& event);
 		void handleWindowOpenRequestedEvent(const omc::event::WindowOpenRequestedEvent& event);
 		std::vector<std::unique_ptr<omc::ui::window::UiWindow>> windows;
 

@@ -1,7 +1,6 @@
 #include "UiManager.hpp"
 
 #include "infra/window/Win32Renderer.hpp"
-#include "infra/media/FfmpegMediaPlayer.hpp"
 
 #include <stdio.h>
 #include <algorithm>
@@ -9,6 +8,16 @@
 
 namespace omc::ui
 {
+	void UiManager::handleFrameReadyEvent(const omc::event::FrameReadyEvent& event)
+	{
+		for (const auto& window : windows) {
+			auto* mediaWindow = dynamic_cast<omc::ui::window::MediaWindow*>(window.get());
+			if (mediaWindow != nullptr) {
+				mediaWindow->onFrameReady(event);
+			}
+		}
+	}
+
 	void UiManager::render()
 	{
 		std::vector<DrawCommand> drawCommands;
