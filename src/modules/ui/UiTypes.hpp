@@ -3,6 +3,7 @@
 #include <string>
 #include <variant>
 #include <cstdint>
+#include <memory>
 
 namespace omc::ui
 {
@@ -48,8 +49,8 @@ namespace omc::ui
 	struct ImageCmd {
 		Vec2 position;
 		Vec2 size;
-		// placeholder para recurso gráfico (id, handle, etc.)
-		int imageId{ 0 };
+		std::shared_ptr<std::vector<uint8_t>> pixelData; // RGBA
+		int imageId; // para debug/tint
 		int zIndex;
 	};
 

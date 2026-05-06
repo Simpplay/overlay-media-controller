@@ -1,40 +1,77 @@
 #pragma once
 
-#include <string>
+#include <memory>
 
-#include "modules/ui/UiTypes.hpp"
+#include "shared/threading/ConcurrentQueue.hpp"
+
 #include "modules/ui/UiWindow.hpp"
+#include "core/event/EventBus.hpp"
+#include "core/event/events/PlayMediaRequestedEvent.hpp"
+#include "core/event/events/FrameReadyEvent.hpp"
+#include "core/types/VideoFrame.hpp"
 
-#include "modules/media/MediaPlayer.hpp"
+namespace omc::ui::window {
 
-namespace omc::ui::window
-{
-	class MediaWindow : public UiWindow
-	{
-	public:
-		MediaWindow(omc::media::MediaPlayer& player, const std::string& mediaPath)
-		{
-			position = { 0, 0 };
-			size = { 800, 600 };
-			backgroundColor = { 0, 0, 0, 255 };
+    class MediaWindow : public UiWindow {
+    public:
+        MediaWindow(int mediaId, omc::event::EventBus& eventBus)
+            : mediaId(mediaId), eventBus(eventBus)
+        {
+            position = { 0, 0 };
+            size = { 800, 600 };
+            backgroundColor = { 0, 0, 0, 255 };
 
-			player.load(mediaPath);
-			player.play();
-		}
+            omc::event::PlayMediaRequestedEvent event{ mediaId };
+            eventBus.post(std::make_unique<omc::event::PlayMediaRequestedEvent>(event));
+        }
 
-		std::unique_ptr<UiWindow> clone() const override
-		{
-			return std::make_unique<MediaWindow>(*this);
-		}
+        std::unique_ptr<UiWindow> clone() const override {
+            return std::make_unique<MediaWindow>(MediaWindow{ mediaId, eventBus });
+        }
 
-		void buildClientDrawCommand(std::vector<omc::ui::DrawCommand>& out) override
-		{
-			out.push_back(omc::ui::TextCmd{ { position.x + 10.0f, position.y + 8.0f }, { 255, 255, 255, 255 }, "MediaWindow", zBase + 3 });
-		}
+        void buildClientDrawCommand(std::vector<DrawCommand>& out) override {
+            if (currentFrame.has_value()) {
+                out.push_back(ImageCmd{
+                    position,
+                    size,
+                    currentFrame->data,
+                    mediaId,
+                    zBase + 1
+                    });
+            }
+            else {
+                out.push_back(TextCmd{
+                    { position.x + 10.0f, position.y + 8.0f },
+                    { 255, 255, 255, 255 },
+                    "Loading...",
+                    zBase + 3
+                    });
+            }
+        }
 
-		void update() override
-		{
+        void update() override {
+            // consumir frame si hay uno nuevo
+            std::optional<omc::media::VideoFrame> frame;
+            if (frameBuffer.try_pop(frame)) {
+                currentFrame = std::move(frame);
+            }
+        }
 
-		}
-	};
+        // 🔥 llamado por EventBus
+        void onFrameReady(const omc::event::FrameReadyEvent& e) {
+            if (e.mediaId != mediaId) return;
+            frameBuffer.push(e.frame);
+        }
+
+    private:
+        int mediaId;
+
+        omc::event::EventBus& eventBus;
+
+        std::optional<omc::media::VideoFrame> currentFrame;
+
+        // 🔥 buffer thread-safe
+        omc::shared::ConcurrentQueue<omc::media::VideoFrame> frameBuffer;
+    };
+
 }

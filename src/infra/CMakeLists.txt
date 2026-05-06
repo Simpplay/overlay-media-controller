@@ -17,6 +17,11 @@ target_include_directories(infra PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/..
 )
 
+target_link_libraries(infra
+    PUBLIC
+        core
+)
+
 if (WIN32)
     target_link_libraries(infra
         PUBLIC

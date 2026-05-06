@@ -40,7 +40,6 @@ namespace omc::ui::window
 		void buildClientDrawCommand(std::vector<omc::ui::DrawCommand>& out) override
 		{
 			out.push_back(omc::ui::TextCmd{ { position.x + 10.0f, position.y + 8.0f }, { 255, 255, 255, 255 }, "TestWindow", zBase + 3 });
-			out.push_back(omc::ui::ImageCmd{ { position.x + 10.0f, position.y + 40.0f }, { 64.0f, 64.0f }, 1, zBase + 3 });
 		}
 	};
 }

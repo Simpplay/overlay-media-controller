@@ -9,6 +9,8 @@
 #include "UiTypes.hpp"
 #include "infra/window/Win32Renderer.hpp"
 
+#include "shared/threading/ThreadPool.hpp"
+
 #include "modules/ui/windows/TestWindow.hpp"
 #include "modules/ui/windows/MediaWindow.hpp"
 #include "infra/media/FfmpegMediaPlayer.hpp"
@@ -29,8 +31,9 @@ namespace omc::ui
 			printf("UiManager initialized..\n");
 		}
 
-		void init()
+		void init(omc::shared::ThreadPool* threadPool)
 		{
+			this->threadPool = threadPool;
 			renderer.init();
 
 			// Test window
@@ -41,8 +44,7 @@ namespace omc::ui
 				eventBus.emit(omc::event::WindowOpenRequestedEvent(testWindow));
 			}
 
-			auto ffmpegPlayer = std::make_unique<omc::infra::FfmpegMediaPlayer>();
-			omc::ui::window::MediaWindow mediaWindow(*ffmpegPlayer, "C:\\Orgullo.mp4");
+			omc::ui::window::MediaWindow mediaWindow(1, eventBus);
 			eventBus.emit(omc::event::WindowOpenRequestedEvent(mediaWindow));
 		}
 
@@ -52,6 +54,8 @@ namespace omc::ui
 	private:
 		void handleWindowOpenRequestedEvent(const omc::event::WindowOpenRequestedEvent& event);
 		std::vector<std::unique_ptr<omc::ui::window::UiWindow>> windows;
+
+		omc::shared::ThreadPool* threadPool{ nullptr };
 
 		omc::event::EventBus& eventBus;
 		omc::infra::Win32Renderer renderer;

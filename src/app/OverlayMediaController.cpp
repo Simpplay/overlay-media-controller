@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "shared/threading/ThreadPool.hpp"
+
 #include "core/event/events/ExitApplicationRequestedEvent.hpp"
 
 constexpr auto APP_NAME = "Overlay Media Controller";
@@ -12,11 +14,13 @@ namespace omc::application
 	{
 		std::cout << "Initializing " << APP_NAME << "...\n";
 
+		omc::shared::ThreadPool threadPool(std::thread::hardware_concurrency());
+
 		eventBus.subscribe<omc::event::ExitApplicationRequestedEvent>([this](const omc::event::ExitApplicationRequestedEvent& event) {
 			close();
 		});
-		
-		uiManager.init();
+
+		uiManager.init(&threadPool);
 
 		running = true;
 		while (running) {
