@@ -3,13 +3,21 @@ cmake_minimum_required(VERSION 3.20)
 project(overlay-media-controller LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# vcpkg deps
-# find_package(httplib CONFIG REQUIRED)
-find_package(unofficial-sqlite3 CONFIG REQUIRED)
-find_package(FFMPEG REQUIRED)
-find_package(GTest CONFIG REQUIRED)
+# Optional external dependencies.
+# This keeps the project configurable on environments where vcpkg (or the
+# corresponding system packages) are not preinstalled.
+find_package(unofficial-sqlite3 CONFIG QUIET)
+find_package(FFMPEG QUIET)
+find_package(GTest CONFIG QUIET)
 
 # módulos
 add_subdirectory(src)
-add_subdirectory(tests)
+
+if (GTest_FOUND)
+    add_subdirectory(tests)
+else ()
+    message(STATUS "GTest not found: skipping tests target configuration.")
+endif ()
