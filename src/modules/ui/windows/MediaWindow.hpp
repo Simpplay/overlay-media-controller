@@ -21,6 +21,9 @@ namespace omc::ui::window {
             size = { 800, 600 };
             backgroundColor = { 0, 0, 0, 255 };
 
+            eventBus.subscribe<omc::event::FrameReadyEvent>([this](const omc::event::FrameReadyEvent& e) {
+                onFrameReady(e);
+            });
 
             if (requestPlayback) {
                 omc::event::PlayMediaRequestedEvent event{ mediaId };
