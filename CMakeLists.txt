@@ -8,7 +8,6 @@ set(CMAKE_CXX_STANDARD 20)
 # find_package(httplib CONFIG REQUIRED)
 find_package(unofficial-sqlite3 CONFIG REQUIRED)
 find_package(FFMPEG REQUIRED)
-find_package(SDL3 CONFIG REQUIRED)
 find_package(GTest CONFIG REQUIRED)
 
 # módulos

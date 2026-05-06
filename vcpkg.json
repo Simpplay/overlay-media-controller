@@ -6,9 +6,10 @@
   "dependencies": [
     {
       "name": "ffmpeg",
-      "features": [ "avcodec", "avformat", "swscale" ]
+      "features": [ "avcodec", "avformat", "swscale", "swresample" ]
     },
     "sqlite3",
     "gtest"
-  ]
+  ],
+  "builtin-baseline": "ec3ad1c0b013c51116b7eed2ae25bcfc38e639e9"
 }

@@ -317,11 +317,9 @@ namespace omc::infra
         LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
 
         if (interactive) {
-            printf("Setting window to interactive mode\n");
             exStyle &= ~WS_EX_TRANSPARENT; // Captura el input
         }
         else {
-            printf("Setting window to click-through mode\n");
             exStyle |= WS_EX_TRANSPARENT;  // Deja pasar los clicks
         }
 

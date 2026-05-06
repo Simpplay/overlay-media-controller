@@ -29,6 +29,7 @@ namespace omc::ui::window
 		virtual void buildClientDrawCommand(std::vector<DrawCommand>& out) = 0;
 		virtual bool hasTitlebar() const { return true; }
 		bool closed() const { return isClosed; }
+		void setZBase(int z) { zBase = z; }
 
 		Vec2 position;
 		Vec2 size;

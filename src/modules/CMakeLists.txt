@@ -1,6 +1,6 @@
 add_library(modules
-	"ui/Modules.cpp"
- "media/MediaManager.cpp")
+	
+ "Modules.h")
 
 add_subdirectory(input)
 add_subdirectory(media)
