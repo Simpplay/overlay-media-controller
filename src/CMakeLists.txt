@@ -17,3 +17,6 @@ target_link_libraries(app
         shared
 
 )
+if (FFMPEG_FOUND)
+    target_compile_definitions(app PRIVATE OMC_HAS_FFMPEG=1)
+endif ()
