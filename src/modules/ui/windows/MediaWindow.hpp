@@ -4,8 +4,6 @@
 #include <random>
 #include <vector>
 
-#include <Windows.h>
-
 #include "modules/ui/UiTypes.hpp"
 #include "modules/ui/UiWindow.hpp"
 
