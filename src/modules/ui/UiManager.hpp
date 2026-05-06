@@ -13,7 +13,6 @@
 
 #include "modules/ui/windows/TestWindow.hpp"
 #include "modules/ui/windows/MediaWindow.hpp"
-#include "infra/media/FfmpegMediaPlayer.hpp"
 
 constexpr auto MAX_Z_INDEX_PER_WINDOW = 10;
 
