@@ -2,7 +2,10 @@
 
 #include <vector>
 #include <algorithm>
+
+#if defined(_WIN32)
 #include <Windows.h>
+#endif
 
 #include "UiTypes.hpp"
 
@@ -56,6 +59,7 @@ namespace omc::ui::window
 		{
 			if (isClosed || !hasTitlebar()) return;
 
+#if defined(_WIN32)
 			POINT cursor{};
 			GetCursorPos(&cursor);
 			const omc::ui::Vec2 mouse{ static_cast<float>(cursor.x), static_cast<float>(cursor.y) };
@@ -102,6 +106,7 @@ namespace omc::ui::window
 			}
 
 			mouseWasDown = mouseDown;
+#endif
 		}
 
 	private:
@@ -127,6 +132,7 @@ namespace omc::ui::window
 
 		void toggleMaximize()
 		{
+#if defined(_WIN32)
 			const float screenWidth = static_cast<float>(GetSystemMetrics(SM_CXSCREEN));
 			const float screenHeight = static_cast<float>(GetSystemMetrics(SM_CYSCREEN));
 
@@ -142,6 +148,7 @@ namespace omc::ui::window
 				size = restoreSize;
 				isMaximized = false;
 			}
+#endif
 		}
 	};
 }
