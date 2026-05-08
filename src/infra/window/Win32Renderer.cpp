@@ -96,7 +96,8 @@ namespace omc::infra
 
         IDCompositionDevice* g_dcompDevice = nullptr;
         IDCompositionTarget* g_dcompTarget = nullptr;
-        IDCompositionVisual* g_dcompVisual = nullptr;
+        IDCompositionVisual* g_rootVisual = nullptr;
+        IDCompositionVisual* g_swapChainVisual = nullptr;
 
         ID2D1Factory* g_d2dFactory = nullptr;
         IDWriteFactory* g_dwriteFactory = nullptr;
@@ -106,6 +107,9 @@ namespace omc::infra
         size_t g_vertexBufferCapacity = 0;
 
         HitTestManager g_hitTest;
+
+        int surfaceWidth = 0;
+        int surfaceHeight = 0;
     };
 
     // =========================================================
@@ -289,6 +293,8 @@ namespace omc::infra
     // =========================================================
     bool Win32Renderer::InitD3D(int width, int height)
     {
+        m_pimpl->surfaceWidth = width;
+        m_pimpl->surfaceHeight = height;
         UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 #ifdef _DEBUG
         flags |= D3D11_CREATE_DEVICE_DEBUG;
@@ -344,11 +350,26 @@ namespace omc::infra
             reinterpret_cast<void**>(&m_pimpl->g_dcompDevice));
         if (FAILED(hr)) { MessageBoxA(nullptr, "DCompositionCreateDevice failed", "Error", MB_OK); return false; }
 
-        m_pimpl->g_dcompDevice->CreateTargetForHwnd(m_pimpl->g_hwnd, TRUE, &m_pimpl->g_dcompTarget);
-        m_pimpl->g_dcompDevice->CreateVisual(&m_pimpl->g_dcompVisual);
-        m_pimpl->g_dcompVisual->SetContent(m_pimpl->g_swapChain);
-        m_pimpl->g_dcompTarget->SetRoot(m_pimpl->g_dcompVisual);
-        m_pimpl->g_dcompDevice->Commit();
+        hr = m_pimpl->g_dcompDevice->CreateTargetForHwnd(m_pimpl->g_hwnd, TRUE, &m_pimpl->g_dcompTarget);
+        if (FAILED(hr)) return false;
+
+        hr = m_pimpl->g_dcompDevice->CreateVisual(&m_pimpl->g_rootVisual);
+        if (FAILED(hr)) return false;
+
+        hr = m_pimpl->g_dcompDevice->CreateVisual(&m_pimpl->g_swapChainVisual);
+        if (FAILED(hr)) return false;
+
+        hr = m_pimpl->g_swapChainVisual->SetContent(m_pimpl->g_swapChain);
+        if (FAILED(hr)) return false;
+
+        hr = m_pimpl->g_rootVisual->AddVisual(m_pimpl->g_swapChainVisual, FALSE, nullptr);
+        if (FAILED(hr)) return false;
+
+        hr = m_pimpl->g_dcompTarget->SetRoot(m_pimpl->g_rootVisual);
+        if (FAILED(hr)) return false;
+
+        hr = m_pimpl->g_dcompDevice->Commit();
+        if (FAILED(hr)) return false;
 
         dxgiDevice->Release();
         adapter->Release();
@@ -374,10 +395,51 @@ namespace omc::infra
         safeRelease(m_pimpl->g_vs);
         safeRelease(m_pimpl->g_ps);
         safeRelease(m_pimpl->g_vertexBuffer);
+        safeRelease(m_pimpl->g_swapChainVisual);
+        safeRelease(m_pimpl->g_rootVisual);
+        safeRelease(m_pimpl->g_dcompTarget);
+        safeRelease(m_pimpl->g_dcompDevice);
         safeRelease(m_pimpl->g_rtv);
         safeRelease(m_pimpl->g_swapChain);
         safeRelease(m_pimpl->g_context);
         safeRelease(m_pimpl->g_device);
+    }
+
+    static void UpdateViewport(ID3D11DeviceContext* context, int width, int height)
+    {
+        D3D11_VIEWPORT vp{};
+        vp.Width = static_cast<FLOAT>(width);
+        vp.Height = static_cast<FLOAT>(height);
+        vp.MinDepth = 0.0f;
+        vp.MaxDepth = 1.0f;
+        context->RSSetViewports(1, &vp);
+    }
+
+    static void ResizeSwapChainIfNeeded(Win32Renderer::Impl& impl, int width, int height)
+    {
+        if (!impl.g_swapChain || !impl.g_device || !impl.g_context || !impl.g_rtv) return;
+        if (width <= 0 || height <= 0) return;
+        if (width == impl.surfaceWidth && height == impl.surfaceHeight) return;
+
+        impl.g_context->OMSetRenderTargets(0, nullptr, nullptr);
+        impl.g_rtv->Release();
+        impl.g_rtv = nullptr;
+
+        if (FAILED(impl.g_swapChain->ResizeBuffers(0, static_cast<UINT>(width), static_cast<UINT>(height), DXGI_FORMAT_UNKNOWN, 0))) {
+            return;
+        }
+
+        ID3D11Texture2D* backBuffer = nullptr;
+        if (FAILED(impl.g_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)))) return;
+        if (FAILED(impl.g_device->CreateRenderTargetView(backBuffer, nullptr, &impl.g_rtv))) {
+            backBuffer->Release();
+            return;
+        }
+        backBuffer->Release();
+
+        impl.surfaceWidth = width;
+        impl.surfaceHeight = height;
+        UpdateViewport(impl.g_context, width, height);
     }
 
     // =========================================================
@@ -622,6 +684,8 @@ namespace omc::infra
     {
         const int sw = GetSystemMetrics(SM_CXSCREEN);
         const int sh = GetSystemMetrics(SM_CYSCREEN);
+
+        ResizeSwapChainIfNeeded(*m_pimpl, sw, sh);
 
         // 1. Clear
         float clearColor[4] = { 0, 0, 0, 0 };
