@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "core/types/Constants.hpp"
 #include "shared/threading/ThreadPool.hpp"
 
 #include "core/event/events/ExitApplicationRequestedEvent.hpp"
@@ -9,8 +10,6 @@
 #ifdef OMC_HAS_FFMPEG
 #include "infra/media/FfmpegMediaPlayer.hpp"
 #endif
-
-constexpr auto APP_NAME = "Overlay Media Controller";
 
 namespace omc::application
 {

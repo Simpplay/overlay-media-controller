@@ -15,8 +15,6 @@
 #include "modules/ui/windows/TestWindow.hpp"
 #include "modules/ui/windows/MediaWindow.hpp"
 
-constexpr auto MAX_Z_INDEX_PER_WINDOW = 10;
-
 namespace omc::ui
 {
 	class UiManager
@@ -50,6 +48,9 @@ namespace omc::ui
 
 			omc::ui::window::MediaWindow mediaWindow(1, eventBus);
 			eventBus.emit(omc::event::WindowOpenRequestedEvent(mediaWindow));
+
+			//omc::event::PlayMediaRequestedEvent playEvent{ 1 };
+			//eventBus.post(std::make_unique<omc::event::PlayMediaRequestedEvent>(playEvent));
 		}
 
 		void render();

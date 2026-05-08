@@ -5,7 +5,7 @@
 namespace omc::media {
     MediaManager::MediaManager(omc::event::EventBus& eventBus, std::shared_ptr<MediaPlayer> mediaPlayer)
         : eventBus(eventBus), mediaPlayer(std::move(mediaPlayer)), mediaCatalog({
-            {1, "resources/media/sample.mp4"}
+            {1, "C:\\Orgullo.mp4"}
         }) {
         this->eventBus.subscribe<omc::event::PlayMediaRequestedEvent>([this](const omc::event::PlayMediaRequestedEvent& event) {
             handlePlayMediaRequestedEvent(event);

@@ -37,10 +37,24 @@ namespace omc::ui::window {
 
         void buildClientDrawCommand(std::vector<DrawCommand>& out) override {
             if (currentFrame.has_value()) {
-                out.push_back(ImageCmd{ position, size, currentFrame->data, mediaId, zBase + 1 });
+                out.push_back(ImageCmd{
+                    position,
+                    size,
+                    currentFrame->data,
+                    currentFrame->width,   // dimensiones reales del frame de video
+                    currentFrame->height,
+                    mediaId,
+                    zBase + 1
+                    });
             }
             else {
-                out.push_back(TextCmd{ { position.x + 10.0f, position.y + 8.0f }, { 255, 255, 255, 255 }, "Loading...", zBase + 3 });
+                // Posicionar bajo la titlebar
+                out.push_back(TextCmd{
+                    { position.x + 10.0f, position.y + kTitleBarHeight + 8.0f },
+                    { 255, 255, 255, 255 },
+                    "Loading...",
+                    zBase + 3
+                    });
             }
         }
 

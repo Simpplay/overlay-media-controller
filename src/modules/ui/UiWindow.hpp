@@ -8,6 +8,7 @@
 #endif
 
 #include "UiTypes.hpp"
+#include "core/types/Constants.hpp"
 
 namespace omc::ui::window
 {
@@ -143,16 +144,16 @@ namespace omc::ui::window
 
 		void drawTitlebar(std::vector<DrawCommand>& out) const
 		{
-			out.push_back(omc::ui::RectCmd{ omc::ui::Rect(position, { size.x, kTitleBarHeight }), { 35, 35, 35, 255 }, zBase + 1 });
+			out.push_back(omc::ui::RectCmd{ omc::ui::Rect(position, { size.x, kTitleBarHeight }), { 35, 35, 35, 255 }, zBase + MAX_Z_INDEX_PER_WINDOW - 2 });
 
 			const float rightStart = position.x + size.x - kButtonPadding - kButtonSize;
 			const omc::ui::Vec2 closePos{ rightStart, position.y + 5.0f };
 			const omc::ui::Vec2 maxPos{ rightStart - (kButtonSize + 4.0f), position.y + 5.0f };
 			const omc::ui::Vec2 resizePos{ rightStart - 2.0f * (kButtonSize + 4.0f), position.y + 5.0f };
 
-			out.push_back(omc::ui::RectCmd{ omc::ui::Rect(closePos, { kButtonSize, kButtonSize }), { 220, 70, 70, 255 }, zBase + 2 });
-			out.push_back(omc::ui::RectCmd{ omc::ui::Rect(maxPos, { kButtonSize, kButtonSize }), { 70, 180, 240, 255 }, zBase + 2 });
-			out.push_back(omc::ui::RectCmd{ omc::ui::Rect(resizePos, { kButtonSize, kButtonSize }), { 230, 180, 70, 255 }, zBase + 2 });
+			out.push_back(omc::ui::RectCmd{ omc::ui::Rect(closePos, { kButtonSize, kButtonSize }), { 220, 70, 70, 255 }, zBase + MAX_Z_INDEX_PER_WINDOW - 1 });
+			out.push_back(omc::ui::RectCmd{ omc::ui::Rect(maxPos, { kButtonSize, kButtonSize }), { 70, 180, 240, 255 }, zBase + MAX_Z_INDEX_PER_WINDOW - 1 });
+			out.push_back(omc::ui::RectCmd{ omc::ui::Rect(resizePos, { kButtonSize, kButtonSize }), { 230, 180, 70, 255 }, zBase + MAX_Z_INDEX_PER_WINDOW - 1 });
 		}
 
 		void toggleMaximize()

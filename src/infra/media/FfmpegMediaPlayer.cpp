@@ -98,12 +98,17 @@ namespace omc::infra {
 
         auto self = shared_from_this();
 
+        printf("ctx before:%p\n", fmt_ctx.get());
+
         threadPool->enqueue([self]() {
             self->decodeLoop();
             });
     }
 
     void FfmpegMediaPlayer::decodeLoop() {
+
+        printf("ctx 1:%p\n", fmt_ctx.get());
+
         AVPacket* packet = av_packet_alloc();
         AVFrame* frame = av_frame_alloc();
         AVFrame* rgbFrame = av_frame_alloc();
@@ -113,6 +118,8 @@ namespace omc::infra {
 
         int bufferSize = av_image_get_buffer_size(AV_PIX_FMT_RGBA, width, height, 1);
         std::vector<uint8_t> buffer(bufferSize);
+
+        printf("ctx 2:%p\n", fmt_ctx.get());
 
         av_image_fill_arrays(
             rgbFrame->data,
@@ -125,9 +132,9 @@ namespace omc::infra {
         );
 
         AVFormatContext* ctx = fmt_ctx.get();
+        printf("ctx 3:%p\n", ctx);
 
         while (running) {
-
             if (av_read_frame(ctx, packet) < 0)
                 break;
 

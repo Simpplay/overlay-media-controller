@@ -48,10 +48,12 @@ namespace omc::ui
 
 	struct ImageCmd {
 		Vec2 position;
-		Vec2 size;
-		std::shared_ptr<std::vector<uint8_t>> pixelData; // RGBA
-		int imageId; // para debug/tint
-		int zIndex;
+		Vec2 size;           // tamaño de display en pantalla
+		std::shared_ptr<std::vector<uint8_t>> data;
+		int  frameWidth;     // ancho real de los píxeles del frame
+		int  frameHeight;    // alto real de los píxeles del frame
+		int  imageId;
+		int  zIndex;
 	};
 
 	using DrawCommand = std::variant<RectCmd, TextCmd, ImageCmd>;
