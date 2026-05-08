@@ -5,6 +5,8 @@
 #include <cstring>
 #include <string>
 
+#include "WebViewRenderer.hpp"
+
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -107,6 +109,7 @@ namespace omc::infra
         size_t g_vertexBufferCapacity = 0;
 
         HitTestManager g_hitTest;
+        std::unique_ptr<WebViewRenderer> webView;
 
         int surfaceWidth = 0;
         int surfaceHeight = 0;
@@ -117,6 +120,15 @@ namespace omc::infra
     // =========================================================
     LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
+        auto* self = reinterpret_cast<Win32Renderer::Impl*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+        if (self && self->webView) {
+            if (msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST) {
+                self->webView->HandleMouseMessage(msg, wParam, lParam);
+            } else if (msg == WM_KEYDOWN || msg == WM_KEYUP || msg == WM_SYSKEYDOWN || msg == WM_SYSKEYUP || msg == WM_CHAR) {
+                self->webView->HandleKeyboardMessage(msg, wParam, lParam);
+            }
+        }
+
         switch (msg) {
         case WM_DESTROY:  PostQuitMessage(0); return 0;
         case WM_NCHITTEST: return HTCLIENT;
@@ -461,6 +473,7 @@ namespace omc::infra
         );
 
         if (!m_pimpl->g_hwnd) return false;
+        SetWindowLongPtr(m_pimpl->g_hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(m_pimpl.get()));
         ShowWindow(m_pimpl->g_hwnd, SW_SHOW);
         return true;
     }
@@ -656,6 +669,15 @@ namespace omc::infra
         if (!InitDirectWrite()) { MessageBoxA(nullptr, "InitDirectWrite failed", "Error", MB_OK); return false; }
         if (!CreateDynamicVertexBuffer(10000)) { MessageBoxA(nullptr, "CreateVertexBuffer failed", "Error", MB_OK); return false; }
 
+        m_pimpl->webView = std::make_unique<WebViewRenderer>();
+        WebViewRenderer::InitParams webParams{};
+        webParams.parentHwnd = m_pimpl->g_hwnd;
+        webParams.initialBounds = RECT{ 100, 100, width - 100, height - 100 };
+        webParams.dcompDevice = m_pimpl->g_dcompDevice;
+        webParams.rootVisual = m_pimpl->g_rootVisual;
+        m_pimpl->webView->Initialize(webParams);
+        m_pimpl->webView->Navigate(L"https://example.com");
+
         return true;
     }
 
@@ -686,6 +708,10 @@ namespace omc::infra
         const int sh = GetSystemMetrics(SM_CYSCREEN);
 
         ResizeSwapChainIfNeeded(*m_pimpl, sw, sh);
+        if (m_pimpl->webView) {
+            m_pimpl->webView->Resize(RECT{ 100, 100, sw - 100, sh - 100 });
+            m_pimpl->webView->Update();
+        }
 
         // 1. Clear
         float clearColor[4] = { 0, 0, 0, 0 };
@@ -768,6 +794,7 @@ namespace omc::infra
 
     void Win32Renderer::onExit(const omc::event::ExitApplicationRequestedEvent&)
     {
+        if (m_pimpl->webView) { m_pimpl->webView->Shutdown(); m_pimpl->webView.reset(); }
         CleanupD3D();
         if (m_pimpl->g_hwnd) {
             DestroyWindow(m_pimpl->g_hwnd);
