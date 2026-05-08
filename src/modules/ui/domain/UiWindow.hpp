@@ -7,7 +7,7 @@
 #include <Windows.h>
 #endif
 
-#include "UiTypes.hpp"
+#include "modules/ui/domain/RenderTypes.hpp"
 #include "core/types/Constants.hpp"
 
 namespace omc::ui::window

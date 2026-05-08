@@ -1,4 +1,4 @@
-#include "threading/api/ThreadPool.hpp"
+#include "core/threading/api/ThreadPool.hpp"
 
 namespace omc::shared {
     ThreadPool::ThreadPool(size_t numThreads) : stop(false) {

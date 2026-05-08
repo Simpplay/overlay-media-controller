@@ -22,6 +22,7 @@ add_library(ui
 
 target_include_directories(ui 
     PUBLIC 
+        ${PROJECT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/api
     PRIVATE 
         ${CMAKE_CURRENT_SOURCE_DIR}/domain

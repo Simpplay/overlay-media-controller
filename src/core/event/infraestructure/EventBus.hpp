@@ -8,7 +8,7 @@
 #include <queue>
 #include <mutex>
 
-#include "Event.hpp"
+#include "core/event/api/Event.hpp"
 
 using EventHandler = std::function<void(const omc::event::Event&)>;
 

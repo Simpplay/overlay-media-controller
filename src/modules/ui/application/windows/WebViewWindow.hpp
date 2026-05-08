@@ -1,6 +1,6 @@
 #pragma once
 
-#include "modules/ui/UiWindow.hpp"
+#include "modules/ui/domain/UiWindow.hpp"
 #include <vector>
 #include <string>
 #include <atomic>

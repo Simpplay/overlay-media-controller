@@ -2,17 +2,17 @@
 
 #include <stdio.h>
 
-#include "core/event/EventBus.hpp"
+#include "core/event/infraestructure/EventBus.hpp"
 
-#include "core/event/events/WindowOpenRequestedEvent.hpp"
-#include "UiWindow.hpp"
-#include "UiTypes.hpp"
-#include "infra/window/Win32Renderer.hpp"
+#include "modules/ui/api/events/WindowOpenRequestedEvent.hpp"
+#include "modules/ui/domain/UiWindow.hpp"
+#include "modules/ui/domain/RenderTypes.hpp"
+#include "modules/ui/infraestructure/Win32Renderer.hpp"
 
-#include "shared/threading/ThreadPool.hpp"
+#include "core/threading/api/ThreadPool.hpp"
 
-#include "modules/ui/windows/TestWindow.hpp"
-#include "modules/ui/windows/WebViewWindow.hpp"
+#include "modules/ui/application/windows/TestWindow.hpp"
+#include "modules/ui/application/windows/WebViewWindow.hpp"
 
 namespace omc::ui
 {
