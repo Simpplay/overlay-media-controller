@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstring>
 #include <string>
+#include <unordered_set>
 
 #include "WebViewRenderer.hpp"
 
@@ -109,7 +110,9 @@ namespace omc::infra
         size_t g_vertexBufferCapacity = 0;
 
         HitTestManager g_hitTest;
-        std::unique_ptr<WebViewRenderer> webView;
+
+        std::unordered_map<int, std::unique_ptr<WebViewRenderer>> webViews;
+        std::unordered_map<int, std::string>                      webViewUrls;
 
         int surfaceWidth = 0;
         int surfaceHeight = 0;
@@ -120,12 +123,17 @@ namespace omc::infra
     // =========================================================
     LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
-        auto* self = reinterpret_cast<Win32Renderer::Impl*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-        if (self && self->webView) {
-            if (msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST) {
-                self->webView->HandleMouseMessage(msg, wParam, lParam);
-            } else if (msg == WM_KEYDOWN || msg == WM_KEYUP || msg == WM_SYSKEYDOWN || msg == WM_SYSKEYUP || msg == WM_CHAR) {
-                self->webView->HandleKeyboardMessage(msg, wParam, lParam);
+        auto* self = reinterpret_cast<Win32Renderer::Impl*>(
+            GetWindowLongPtr(hwnd, GWLP_USERDATA));
+
+        if (self) {
+            for (auto& [id, wv] : self->webViews) {
+                if (!wv) continue;
+                if (msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST)
+                    wv->HandleMouseMessage(msg, wParam, lParam);
+                else if (msg == WM_KEYDOWN || msg == WM_KEYUP ||
+                    msg == WM_SYSKEYDOWN || msg == WM_SYSKEYUP || msg == WM_CHAR)
+                    wv->HandleKeyboardMessage(msg, wParam, lParam);
             }
         }
 
@@ -374,7 +382,7 @@ namespace omc::infra
         hr = m_pimpl->g_swapChainVisual->SetContent(m_pimpl->g_swapChain);
         if (FAILED(hr)) return false;
 
-        hr = m_pimpl->g_rootVisual->AddVisual(m_pimpl->g_swapChainVisual, FALSE, nullptr);
+        hr = m_pimpl->g_rootVisual->AddVisual(m_pimpl->g_swapChainVisual, TRUE, nullptr);
         if (FAILED(hr)) return false;
 
         hr = m_pimpl->g_dcompTarget->SetRoot(m_pimpl->g_rootVisual);
@@ -669,15 +677,7 @@ namespace omc::infra
         if (!InitDirectWrite()) { MessageBoxA(nullptr, "InitDirectWrite failed", "Error", MB_OK); return false; }
         if (!CreateDynamicVertexBuffer(10000)) { MessageBoxA(nullptr, "CreateVertexBuffer failed", "Error", MB_OK); return false; }
 
-        m_pimpl->webView = std::make_unique<WebViewRenderer>();
-        WebViewRenderer::InitParams webParams{};
-        webParams.parentHwnd = m_pimpl->g_hwnd;
-        webParams.initialBounds = RECT{ 100, 100, width - 100, height - 100 };
-        webParams.dcompDevice = m_pimpl->g_dcompDevice;
-        webParams.rootVisual = m_pimpl->g_rootVisual;
-        m_pimpl->webView->Initialize(webParams);
-        m_pimpl->webView->Navigate(L"https://example.com");
-
+        // WebView instances are created on-demand in render() — nothing to do here.
         return true;
     }
 
@@ -696,7 +696,11 @@ namespace omc::infra
         GetCursorPos(&pt);
         ScreenToClient(m_pimpl->g_hwnd, &pt);
 
-        UpdateClickThrough(m_pimpl->g_hwnd, m_pimpl->g_hitTest.isInteractive(pt.x, pt.y));
+        for (auto& [id, wv] : m_pimpl->webViews)
+            if (wv) wv->Update();
+
+        UpdateClickThrough(m_pimpl->g_hwnd,
+            m_pimpl->g_hitTest.isInteractive(pt.x, pt.y));
     }
 
     // =========================================================
@@ -708,30 +712,29 @@ namespace omc::infra
         const int sh = GetSystemMetrics(SM_CYSCREEN);
 
         ResizeSwapChainIfNeeded(*m_pimpl, sw, sh);
-        if (m_pimpl->webView) {
-            m_pimpl->webView->Resize(RECT{ 100, 100, sw - 100, sh - 100 });
-            m_pimpl->webView->Update();
-        }
 
-        // 1. Clear
+        // --- 1. Clear ---
         float clearColor[4] = { 0, 0, 0, 0 };
         m_pimpl->g_context->OMSetRenderTargets(1, &m_pimpl->g_rtv, nullptr);
         m_pimpl->g_context->ClearRenderTargetView(m_pimpl->g_rtv, clearColor);
 
-        // 2. Clasificar comandos
-        std::vector<omc::ui::RectCmd>  rects;
-        std::vector<omc::ui::ImageCmd> images;
-        std::vector<omc::ui::TextCmd>  texts;
+        // --- 2. Classify commands ---
+        std::vector<omc::ui::RectCmd>    rects;
+        std::vector<omc::ui::ImageCmd>   images;
+        std::vector<omc::ui::TextCmd>    texts;
+        std::vector<omc::ui::WebViewCmd> webViews;
 
         for (const auto& cmd : drawCommands) {
-            if (auto r = std::get_if<omc::ui::RectCmd>(&cmd))  rects.push_back(*r);
-            else if (auto i = std::get_if<omc::ui::ImageCmd>(&cmd)) images.push_back(*i);
-            else if (auto t = std::get_if<omc::ui::TextCmd>(&cmd))  texts.push_back(*t);
+            if (auto* r = std::get_if<omc::ui::RectCmd>(&cmd)) rects.push_back(*r);
+            else if (auto* i = std::get_if<omc::ui::ImageCmd>(&cmd)) images.push_back(*i);
+            else if (auto* t = std::get_if<omc::ui::TextCmd>(&cmd)) texts.push_back(*t);
+            else if (auto* w = std::get_if<omc::ui::WebViewCmd>(&cmd)) webViews.push_back(*w);
         }
 
         auto byZ = [](const auto& a, const auto& b) { return a.zIndex < b.zIndex; };
         std::sort(rects.begin(), rects.end(), byZ);
         std::sort(images.begin(), images.end(), byZ);
+        std::sort(webViews.begin(), webViews.end(), byZ);
 
         // 3. Estado del pipeline común
         const float blendFactor[4] = {};
@@ -770,12 +773,75 @@ namespace omc::infra
             m_pimpl->g_context->PSSetShaderResources(0, 1, &nullSRV);
         }
 
-        // 6. Texto via DirectWrite (última pasada antes del Present)
+        // 7. Texto via DirectWrite (última pasada antes del Present)
         if (!texts.empty()) {
             RenderText(texts, sw, sh);
         }
 
-        // 7. Hit testing
+        std::unordered_set<int> activeIds;
+
+        for (const auto& wvCmd : webViews) {
+            activeIds.insert(wvCmd.windowId);
+
+            auto& wv = m_pimpl->webViews[wvCmd.windowId];
+
+            // First time we see this ID: create the renderer
+            if (!wv) {
+                wv = std::make_unique<WebViewRenderer>();
+
+                const std::string url = wvCmd.url;
+                WebViewRenderer* rawWv = wv.get();
+
+                WebViewRenderer::InitParams p{};
+                p.parentHwnd = m_pimpl->g_hwnd;
+                p.dcompDevice = m_pimpl->g_dcompDevice;
+                p.rootVisual = m_pimpl->g_rootVisual;
+                p.initialBounds = RECT{
+                    static_cast<LONG>(wvCmd.rect.position.x),
+                    static_cast<LONG>(wvCmd.rect.position.y),
+                    static_cast<LONG>(wvCmd.rect.position.x + wvCmd.rect.size.x),
+                    static_cast<LONG>(wvCmd.rect.position.y + wvCmd.rect.size.y)
+                };
+                p.onReady = [rawWv, url](HRESULT hr) {
+                    if (SUCCEEDED(hr))
+                        rawWv->Navigate(std::wstring(url.begin(), url.end()));
+                    };
+
+                m_pimpl->webViewUrls[wvCmd.windowId] = url;
+                wv->Initialize(p);   // ← una sola vez, con el callback correcto
+            }
+            else {
+                // Resize every frame to track window drag / resize
+                RECT bounds{
+                    static_cast<LONG>(wvCmd.rect.position.x),
+                    static_cast<LONG>(wvCmd.rect.position.y),
+                    static_cast<LONG>(wvCmd.rect.position.x + wvCmd.rect.size.x),
+                    static_cast<LONG>(wvCmd.rect.position.y + wvCmd.rect.size.y)
+                };
+                wv->Resize(bounds);
+
+                // Re-navigate only when the URL actually changes
+                auto& cachedUrl = m_pimpl->webViewUrls[wvCmd.windowId];
+                if (wv->IsReady() && wvCmd.url != cachedUrl) {
+                    cachedUrl = wvCmd.url;
+                    wv->Navigate(std::wstring(wvCmd.url.begin(), wvCmd.url.end()));
+                }
+            }
+        }
+
+        // Destroy renderers for windows that are no longer in the command list
+        for (auto it = m_pimpl->webViews.begin(); it != m_pimpl->webViews.end(); ) {
+            if (activeIds.find(it->first) == activeIds.end()) {
+                if (it->second) it->second->Shutdown();
+                m_pimpl->webViewUrls.erase(it->first);
+                it = m_pimpl->webViews.erase(it);
+            }
+            else {
+                ++it;
+            }
+        }
+
+        // 8. Hit testing
         std::vector<HitRegion> regions;
         for (const auto& cmd : drawCommands) {
             if (auto r = std::get_if<omc::ui::RectCmd>(&cmd)) {
@@ -788,13 +854,17 @@ namespace omc::infra
         }
         m_pimpl->g_hitTest.setRegions(std::move(regions));
 
-        // 8. Present
+        // 9. Present
         m_pimpl->g_swapChain->Present(1, 0);
     }
 
     void Win32Renderer::onExit(const omc::event::ExitApplicationRequestedEvent&)
     {
-        if (m_pimpl->webView) { m_pimpl->webView->Shutdown(); m_pimpl->webView.reset(); }
+        for (auto& [id, wv] : m_pimpl->webViews)
+            if (wv) { wv->Shutdown(); }
+        m_pimpl->webViews.clear();
+        m_pimpl->webViewUrls.clear();
+
         CleanupD3D();
         if (m_pimpl->g_hwnd) {
             DestroyWindow(m_pimpl->g_hwnd);

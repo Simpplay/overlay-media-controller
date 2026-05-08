@@ -56,5 +56,13 @@ namespace omc::ui
 		int  zIndex;
 	};
 
-	using DrawCommand = std::variant<RectCmd, TextCmd, ImageCmd>;
+	struct WebViewCmd
+	{
+		int         windowId{};   // stable ID from WebViewWindow::m_id
+		std::string url;          // current navigation target
+		Rect        rect{};       // content area (below the title bar)
+		int         zIndex{};
+	};
+
+	using DrawCommand = std::variant<RectCmd, TextCmd, ImageCmd, WebViewCmd>;
 }

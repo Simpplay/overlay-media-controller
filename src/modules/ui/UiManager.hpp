@@ -14,6 +14,7 @@
 
 #include "modules/ui/windows/TestWindow.hpp"
 #include "modules/ui/windows/MediaWindow.hpp"
+#include "modules/ui/windows/WebViewWindow.hpp"
 
 namespace omc::ui
 {
@@ -39,18 +40,20 @@ namespace omc::ui
 			renderer.init();
 
 			// Test window
-			int numTestWindows = 2;
+			int numTestWindows = 0;
 
 			for (int i = 0; i < numTestWindows; ++i) {
 				omc::ui::window::TestWindow testWindow;
 				eventBus.emit(omc::event::WindowOpenRequestedEvent(testWindow));
 			}
 
-			omc::ui::window::MediaWindow mediaWindow(1, eventBus);
-			eventBus.emit(omc::event::WindowOpenRequestedEvent(mediaWindow));
+			//omc::ui::window::MediaWindow mediaWindow(1, eventBus);
+			//eventBus.emit(omc::event::WindowOpenRequestedEvent(mediaWindow));
 
-			//omc::event::PlayMediaRequestedEvent playEvent{ 1 };
-			//eventBus.post(std::make_unique<omc::event::PlayMediaRequestedEvent>(playEvent));
+			// Here create a webview window and navigate to a URL, e.g.: youtube.com, and test if it renders correctly and is interactive.
+			eventBus.emit(omc::event::WindowOpenRequestedEvent{
+				omc::ui::window::WebViewWindow("https://youtube.com", {200, 150}, {960, 640})
+			});
 		}
 
 		void render();
