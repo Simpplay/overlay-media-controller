@@ -1,10 +1,14 @@
 set(INFRA_SOURCES
     "InfraStub.cpp"
     "window/Win32Renderer.hpp"
+    "window/WebViewRenderer.hpp"
 )
 
 if (WIN32)
-    list(APPEND INFRA_SOURCES "window/Win32Renderer.cpp")
+    list(APPEND INFRA_SOURCES
+        "window/Win32Renderer.cpp"
+        "window/WebViewRenderer.cpp"
+    )
 endif ()
 
 if (FFMPEG_FOUND)
@@ -27,6 +31,7 @@ if (WIN32)
         PUBLIC
             d3d11
             dxgi
+            dcomp
     )
 endif ()
 
