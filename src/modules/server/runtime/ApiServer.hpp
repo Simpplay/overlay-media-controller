@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "core/event/EventBus.hpp"
+#include "core/event/infraestructure/EventBus.hpp"
 
 namespace omc::server
 {

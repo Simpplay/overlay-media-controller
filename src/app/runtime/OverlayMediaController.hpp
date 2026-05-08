@@ -2,13 +2,13 @@
 
 #include <memory>
 
-#include "core/event/EventBus.hpp"
+#include "core/event/infraestructure/EventBus.hpp"
 
-#include "modules/ui/UiManager.hpp"
+#include "modules/ui/runtime/UiManager.hpp"
 
-#include "modules/media/MediaManager.hpp"
+#include "modules/media/runtime/MediaManager.hpp"
 
-#include "modules/server/ApiServer.hpp"
+#include "modules/server/runtime/ApiServer.hpp"
 
 namespace omc::application
 {

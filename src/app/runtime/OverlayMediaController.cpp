@@ -3,9 +3,9 @@
 #include <iostream>
 
 #include "core/types/Constants.hpp"
-#include "shared/threading/ThreadPool.hpp"
+#include "core/threading/api/ThreadPool.hpp"
 
-#include "core/event/events/ExitApplicationRequestedEvent.hpp"
+#include "core/event/api/events/ExitApplicationRequestedEvent.hpp"
 
 namespace omc::application
 {

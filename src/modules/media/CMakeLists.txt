@@ -18,6 +18,7 @@ add_library(media
 
 target_include_directories(media 
     PUBLIC 
+        ${PROJECT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/api
     PRIVATE 
         ${CMAKE_CURRENT_SOURCE_DIR}/domain

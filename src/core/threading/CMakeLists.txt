@@ -7,11 +7,9 @@ add_library(threading
 
 target_include_directories(threading 
     PUBLIC 
+        ${PROJECT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/api
     PRIVATE 
         ${CMAKE_CURRENT_SOURCE_DIR}/application
 )
 
-target_link_libraries(threading
-    PUBLIC core
-)

@@ -4,8 +4,8 @@
 #include <random>
 #include <vector>
 
-#include "modules/ui/UiTypes.hpp"
-#include "modules/ui/UiWindow.hpp"
+#include "modules/ui/domain/RenderTypes.hpp"
+#include "modules/ui/domain/UiWindow.hpp"
 
 namespace omc::ui::window
 {

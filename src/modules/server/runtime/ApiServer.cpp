@@ -2,7 +2,7 @@
 
 #include <httplib.h>
 
-#include "shared/threading/ThreadPool.hpp"
+#include "core/threading/api/ThreadPool.hpp"
 
 namespace omc::server
 {

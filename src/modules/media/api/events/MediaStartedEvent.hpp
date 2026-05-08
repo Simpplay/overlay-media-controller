@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/event/Event.hpp"
+#include "core/event/api/Event.hpp"
 
 namespace omc::event {
 	class MediaStartedEvent : public Event {

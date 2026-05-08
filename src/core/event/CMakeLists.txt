@@ -8,11 +8,9 @@ add_library(event
 
 target_include_directories(event 
     PUBLIC 
+        ${PROJECT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/api  # Solo la API es pública
     PRIVATE 
         ${CMAKE_CURRENT_SOURCE_DIR}/infraestructure
 )
 
-target_link_libraries(event
-    PUBLIC core
-)

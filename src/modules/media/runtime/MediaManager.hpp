@@ -4,8 +4,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "core/event/EventBus.hpp"
-#include "core/event/events/PlayMediaRequestedEvent.hpp"
+#include "core/event/infraestructure/EventBus.hpp"
+#include "modules/media/api/events/PlayMediaRequestedEvent.hpp"
 
 namespace omc::media {
     class MediaManager {

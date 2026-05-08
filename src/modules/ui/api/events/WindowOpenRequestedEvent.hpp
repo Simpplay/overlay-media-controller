@@ -2,8 +2,8 @@
 
 #include <memory>
 
-#include "core/event/Event.hpp"
-#include "modules/ui/UiWindow.hpp"
+#include "core/event/api/Event.hpp"
+#include "modules/ui/domain/UiWindow.hpp"
 
 namespace omc::event {
     class WindowOpenRequestedEvent : public Event {

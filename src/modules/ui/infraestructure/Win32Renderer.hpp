@@ -14,8 +14,8 @@
 
 #include "modules/ui/domain/RenderTypes.hpp"
 #include "core/event/api/IEventBus.hpp"
-#include "core/event/events/ExitApplicationRequestedEvent.hpp"
-#include "HitTestManager.hpp"
+#include "core/event/api/events/ExitApplicationRequestedEvent.hpp"
+#include "modules/ui/infraestructure/HitTest.hpp"
 
 namespace omc::infra
 {
