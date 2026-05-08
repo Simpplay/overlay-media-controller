@@ -9,7 +9,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Optional external dependencies.
 find_package(unofficial-webview2 CONFIG REQUIRED)
 find_package(unofficial-sqlite3 CONFIG QUIET)
-find_package(FFMPEG QUIET)
 find_package(GTest CONFIG QUIET)
 
 # módulos

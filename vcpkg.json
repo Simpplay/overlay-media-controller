@@ -4,10 +4,6 @@
   "version": "0.1.0",
   "description": "C++ overlay media controller with FFmpeg, SQLite, and HTTP API",
   "dependencies": [
-    {
-      "name": "ffmpeg",
-      "features": [ "avcodec", "avformat", "swscale", "swresample" ]
-    },
     "webview2",
     "sqlite3",
     "gtest"

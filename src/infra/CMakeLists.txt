@@ -11,10 +11,6 @@ if (WIN32)
     )
 endif ()
 
-if (FFMPEG_FOUND)
-    list(APPEND INFRA_SOURCES "media/FfmpegMediaPlayer.cpp")
-endif ()
-
 add_library(infra ${INFRA_SOURCES})
 
 target_include_directories(infra PUBLIC
@@ -34,10 +30,4 @@ if (WIN32)
             dcomp
             unofficial::webview2::webview2
     )
-endif ()
-
-if (FFMPEG_FOUND)
-    target_include_directories(infra PUBLIC ${FFMPEG_INCLUDE_DIRS})
-    target_link_directories(infra PUBLIC ${FFMPEG_LIBRARY_DIRS})
-    target_link_libraries(infra PUBLIC ${FFMPEG_LIBRARIES})
 endif ()
