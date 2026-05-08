@@ -125,8 +125,26 @@ namespace omc::infra
         m_bounds = boundsPx;
         if (!m_compositionController || !m_controller) return;
 
-        m_controller->put_Bounds(m_bounds);
+        // In composition mode, the visual offset controls where the WebView is drawn
+        // inside the parent window. Bounds alone does not reliably move the content.
+        if (m_webViewVisual) {
+            m_webViewVisual->SetOffsetX(static_cast<float>(m_bounds.left));
+            m_webViewVisual->SetOffsetY(static_cast<float>(m_bounds.top));
+        }
+
+        RECT localBounds{
+            0,
+            0,
+            m_bounds.right - m_bounds.left,
+            m_bounds.bottom - m_bounds.top
+        };
+
+        m_controller->put_Bounds(localBounds);
         m_controller->put_IsVisible(TRUE);
+
+        if (m_dcompDevice) {
+            m_dcompDevice->Commit();
+        }
     }
 
     void WebViewRenderer::Navigate(const std::wstring& url)
