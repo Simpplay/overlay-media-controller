@@ -60,25 +60,4 @@ namespace omc::infra
         void onExit(const omc::event::ExitApplicationRequestedEvent&);
     };
 }
-#else
-#include <vector>
-
-#include "modules/ui/UiTypes.hpp"
-#include "core/event/EventBus.hpp"
-#include "core/event/events/ExitApplicationRequestedEvent.hpp"
-
-namespace omc::infra
-{
-	class Win32Renderer
-	{
-	public:
-		explicit Win32Renderer(omc::event::EventBus&) {}
-		~Win32Renderer() = default;
-
-		bool init() { return true; }
-		void update() {}
-		void render(const std::vector<omc::ui::DrawCommand>&) {}
-		void onExit(const omc::event::ExitApplicationRequestedEvent&) {}
-	};
-}
 #endif
