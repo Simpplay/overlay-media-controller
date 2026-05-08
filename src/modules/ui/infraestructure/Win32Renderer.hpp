@@ -12,8 +12,8 @@
 #include <d2d1.h>
 #include <dwrite.h>
 
-#include "modules/ui/UiTypes.hpp"
-#include "core/event/EventBus.hpp"
+#include "modules/ui/domain/RenderTypes.hpp"
+#include "core/event/api/IEventBus.hpp"
 #include "core/event/events/ExitApplicationRequestedEvent.hpp"
 #include "HitTestManager.hpp"
 

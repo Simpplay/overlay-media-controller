@@ -3,16 +3,19 @@
 #include <memory>
 
 #include "core/event/EventBus.hpp"
+
 #include "modules/ui/UiManager.hpp"
+
 #include "modules/media/MediaManager.hpp"
-#include "modules/media/MediaPlayer.hpp"
+
+#include "modules/server/ApiServer.hpp"
 
 namespace omc::application
 {
 	class OverlayMediaController
 	{
 	public:
-		void initialize();
+		void initialize(std::string dbPath, int port);
 		void close();
 
 	private:
@@ -21,7 +24,9 @@ namespace omc::application
 		omc::event::EventBus eventBus;
 
 		omc::ui::UiManager uiManager{ eventBus };
-		std::shared_ptr<omc::media::MediaPlayer> mediaPlayer;
+
 		std::unique_ptr<omc::media::MediaManager> mediaManager;
+
+		std::unique_ptr<omc::server::ApiServer> apiServer;
 	};
 }

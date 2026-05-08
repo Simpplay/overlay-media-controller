@@ -1,10 +1,45 @@
 add_library(ui
-    "UiManager.cpp" "UiManager.hpp" "UiTypes.hpp" "UiWindow.hpp" "windows/TestWindow.hpp" "windows/WebViewWindow.hpp")
+    "api/UiDto.hpp"
+    "api/IUiService.hpp"
+    "api/events/WindowOpenRequestedEvent.hpp"
 
-target_include_directories(ui PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/..
+    "application/UiService.cpp"
+    "application/windows/TestWindow.hpp"
+    "application/windows/WebViewWindow.hpp"
+
+    "domain/RenderTypes.hpp"
+    "domain/UiWindow.hpp"
+
+    "infraestructure/HitTest.hpp"
+    "infraestructure/WebViewRenderer.hpp"
+    "infraestructure/WebViewRenderer.cpp"
+    "infraestructure/Win32Renderer.hpp"
+    "infraestructure/Win32Renderer.cpp"
+
+    "runtime/UiManager.hpp"
+    "runtime/UiManager.cpp"
+)
+
+target_include_directories(ui 
+    PUBLIC 
+        ${CMAKE_CURRENT_SOURCE_DIR}/api
+    PRIVATE 
+        ${CMAKE_CURRENT_SOURCE_DIR}/domain
+        ${CMAKE_CURRENT_SOURCE_DIR}/application
+        ${CMAKE_CURRENT_SOURCE_DIR}/infraestructure
+        ${CMAKE_CURRENT_SOURCE_DIR}/runtime
 )
 
 target_link_libraries(ui
-    PUBLIC core infra
+    PUBLIC core
 )
+
+if (WIN32)
+    target_link_libraries(ui
+        PUBLIC
+            d3d11
+            dxgi
+            dcomp
+            unofficial::webview2::webview2
+    )
+endif ()

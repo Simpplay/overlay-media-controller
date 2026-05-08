@@ -9,9 +9,12 @@
 
 namespace omc::application
 {
-	void OverlayMediaController::initialize()
+	void OverlayMediaController::initialize(std::string dbPath, int port)
 	{
-		std::cout << "Initializing " << APP_NAME << "...\n";
+		std::cout 
+			<< APP_NAME << "\n"
+			<< "Database: " << dbPath << "\n"
+			<< "Port: " << port << "\n";
 
 		omc::shared::ThreadPool threadPool(std::thread::hardware_concurrency());
 
@@ -20,6 +23,13 @@ namespace omc::application
 		});
 
 		uiManager.init(&threadPool);
+
+		apiServer = std::make_unique<omc::server::ApiServer>();
+		threadPool.enqueue([this, port]() {
+			apiServer->start(port, eventBus);
+		});
+
+		std::cout << "Listening on: http://0.0.0.0:" << port << "\n";
 
 		running = true;
 		while (running) {
@@ -35,6 +45,10 @@ namespace omc::application
 	void OverlayMediaController::close()
 	{
 		std::cout << "Closing " << APP_NAME << "...\n";
+
+		if (apiServer)
+			apiServer->stop();
+
 		running = false;
 	}
 };
