@@ -37,8 +37,9 @@ namespace omc::infra
         void update();
         void render(const std::vector<omc::ui::DrawCommand>& drawCommands);
 
-    private:
         struct Impl;
+
+    private:
         std::unique_ptr<Impl> m_pimpl;
         omc::event::EventBus& eventBus;
 

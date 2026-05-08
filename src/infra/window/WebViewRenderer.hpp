@@ -6,6 +6,7 @@
 #include <dcomp.h>
 #include <wrl.h>
 #include <WebView2.h>
+#include <windowsx.h>
 
 #include <functional>
 #include <string>

@@ -8,6 +8,7 @@
       "name": "ffmpeg",
       "features": [ "avcodec", "avformat", "swscale", "swresample" ]
     },
+    "webview2",
     "sqlite3",
     "gtest"
   ],

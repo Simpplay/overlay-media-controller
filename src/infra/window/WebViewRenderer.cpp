@@ -41,7 +41,15 @@ namespace omc::infra
                     }
 
                     m_environment = env;
-                    return m_environment->CreateCoreWebView2CompositionController(
+                    ComPtr<ICoreWebView2Environment3> env3;
+                    HRESULT castHr = m_environment.As(&env3);
+
+                    if (FAILED(castHr) || !env3) {
+                        if (onReady) onReady(castHr);
+                        return castHr;
+                    }
+
+                    return env3->CreateCoreWebView2CompositionController(
                         m_parentHwnd,
                         Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2CompositionControllerCompletedHandler>(
                             [this, onReady](HRESULT controllerResult, ICoreWebView2CompositionController* compositionController) -> HRESULT {
@@ -84,7 +92,12 @@ namespace omc::infra
         if (!m_controller || !m_webView) return false;
 
         COREWEBVIEW2_COLOR transparent{ 0, 0, 0, 0 };
-        m_controller->put_DefaultBackgroundColor(transparent);
+        ComPtr<ICoreWebView2Controller2> controller2;
+        HRESULT hr = m_controller.As(&controller2);
+
+        if (SUCCEEDED(hr) && controller2) {
+            controller2->put_DefaultBackgroundColor(transparent);
+        }
 
         const wchar_t* cssInjection = LR"JS(
             (() => {
@@ -113,7 +126,7 @@ namespace omc::infra
         if (!m_compositionController || !m_controller) return;
 
         m_controller->put_Bounds(m_bounds);
-        m_compositionController->put_IsVisible(TRUE);
+        m_controller->put_IsVisible(TRUE);
     }
 
     void WebViewRenderer::Navigate(const std::wstring& url)
@@ -149,7 +162,18 @@ namespace omc::infra
         }
 
         UINT32 data = (msg == WM_MOUSEWHEEL || msg == WM_MOUSEHWHEEL) ? static_cast<UINT32>(GET_WHEEL_DELTA_WPARAM(wParam)) : 0;
-        return SUCCEEDED(m_compositionController->SendMouseInput(kind, 0, data, point));
+        ComPtr<ICoreWebView2CompositionController> compositionController;
+        HRESULT hr = m_compositionController.As(&compositionController);
+
+        if (FAILED(hr) || !compositionController)
+            return false;
+
+        return SUCCEEDED(
+            compositionController->SendMouseInput(
+                kind,
+                static_cast<COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS>(0),
+                data,
+                point));
     }
 
     void WebViewRenderer::MoveFocusToWebView()

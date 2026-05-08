@@ -32,6 +32,7 @@ if (WIN32)
             d3d11
             dxgi
             dcomp
+            unofficial::webview2::webview2
     )
 endif ()
 
