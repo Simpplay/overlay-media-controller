@@ -23,6 +23,7 @@ namespace omc::media
 		) override;
 
 		std::optional<MediaSourceDto> getMediaSourceById(int id) override;
+		std::optional<MediaFileDto> getMediaFileById(int id) override;
 
 		bool deleteMediaSourceById(int id) override;
 

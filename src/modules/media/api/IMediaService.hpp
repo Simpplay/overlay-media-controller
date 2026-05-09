@@ -22,6 +22,7 @@ namespace omc::media
 		) = 0;
 
 		virtual std::optional<MediaSourceDto> getMediaSourceById(int id) = 0;
+		virtual std::optional<MediaFileDto> getMediaFileById(int id) = 0;
 
 		virtual bool deleteMediaSourceById(int id) = 0;
 	};

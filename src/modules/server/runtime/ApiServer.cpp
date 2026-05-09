@@ -1,7 +1,9 @@
 #include "ApiServer.hpp"
 
 #include <algorithm>
+#include <fstream>
 #include <httplib.h>
+#include <limits>
 #include <stdexcept>
 #include <string_view>
 #include <unordered_map>
@@ -41,6 +43,48 @@ namespace omc::server
 			std::string("{\"error\":\"") + std::string(message) + "\"}",
 			"application/json"
 		);
+	}
+
+	static bool parseRangeHeader(
+		const std::string& value,
+		size_t totalSize,
+		size_t& start,
+		size_t& end)
+	{
+		if (!value.starts_with("bytes=") || totalSize == 0) {
+			return false;
+		}
+
+		const auto spec = value.substr(6);
+		const auto dash = spec.find('-');
+		if (dash == std::string::npos) {
+			return false;
+		}
+
+		const auto startToken = spec.substr(0, dash);
+		const auto endToken = spec.substr(dash + 1);
+
+		try {
+			if (startToken.empty()) {
+				const size_t suffixLen = static_cast<size_t>(std::stoull(endToken));
+				if (suffixLen == 0) {
+					return false;
+				}
+				start = (suffixLen >= totalSize) ? 0 : totalSize - suffixLen;
+				end = totalSize - 1;
+			}
+			else {
+				start = static_cast<size_t>(std::stoull(startToken));
+				end = endToken.empty()
+					? (totalSize - 1)
+					: static_cast<size_t>(std::stoull(endToken));
+			}
+		}
+		catch (...) {
+			return false;
+		}
+
+		return start <= end && end < totalSize;
 	}
 
 	// ---------------------------------------------------------------------------
@@ -155,6 +199,91 @@ namespace omc::server
 				try {
 					auto sources = mediaService.getAllMediaSources();
 					res.set_content(omc::json::JsonSerializer::serialize(sources), "application/json");
+				}
+				catch (const std::exception& e) {
+					setError(res, httplib::StatusCode::InternalServerError_500, e.what());
+				}
+				});
+
+			server.Get(R"(/media/(\d+))", [this](const httplib::Request& req, httplib::Response& res) {
+				try {
+					const int id = extractId(req);
+					auto media = mediaService.getMediaFileById(id);
+					if (!media) {
+						setError(res, httplib::StatusCode::NotFound_404, "Media source not found");
+						return;
+					}
+
+					const auto& path = media->filepath;
+					std::ifstream file(path, std::ios::binary | std::ios::ate);
+					if (!file) {
+						setError(res, httplib::StatusCode::NotFound_404, "Media file not found");
+						return;
+					}
+
+					const size_t totalSize = static_cast<size_t>(file.tellg());
+					file.close();
+					res.set_header("Accept-Ranges", "bytes");
+
+					size_t start = 0;
+					size_t end = totalSize > 0 ? totalSize - 1 : 0;
+					bool partial = false;
+
+					const auto rangeHeader = req.get_header_value("Range");
+					if (!rangeHeader.empty()) {
+						if (!parseRangeHeader(rangeHeader, totalSize, start, end)) {
+							res.status = httplib::StatusCode::RangeNotSatisfiable_416;
+							res.set_header("Content-Range", "bytes */" + std::to_string(totalSize));
+							return;
+						}
+						partial = true;
+					}
+
+					const size_t chunkSize = (totalSize == 0) ? 0 : (end - start + 1);
+					res.status = partial ? httplib::StatusCode::PartialContent_206 : httplib::StatusCode::OK_200;
+					res.set_header("Content-Type", media->contentType);
+					res.set_header("Content-Length", std::to_string(chunkSize));
+					if (partial) {
+						res.set_header("Content-Range",
+							"bytes " + std::to_string(start) + "-" + std::to_string(end) + "/" + std::to_string(totalSize));
+					}
+
+					res.set_content_provider(
+						chunkSize,
+						media->contentType,
+						[path, start, end](size_t offset, size_t length, httplib::DataSink& sink) {
+							std::ifstream stream(path, std::ios::binary);
+							if (!stream) {
+								return false;
+							}
+
+							const size_t readStart = start + offset;
+							if (readStart > end) {
+								sink.done();
+								return true;
+							}
+
+							const size_t remaining = (end - readStart) + 1;
+							const size_t toRead = std::min(length, remaining);
+							std::string buffer(toRead, '\0');
+
+							stream.seekg(static_cast<std::streamoff>(readStart));
+							stream.read(buffer.data(), static_cast<std::streamsize>(toRead));
+							const size_t bytesRead = static_cast<size_t>(stream.gcount());
+
+							if (bytesRead == 0) {
+								return false;
+							}
+
+							sink.write(buffer.data(), bytesRead);
+							if (bytesRead < toRead || (readStart + bytesRead - 1) >= end) {
+								sink.done();
+							}
+							return true;
+						});
+				}
+				catch (const std::invalid_argument&) {
+					setError(res, httplib::StatusCode::BadRequest_400, "Invalid ID format");
 				}
 				catch (const std::exception& e) {
 					setError(res, httplib::StatusCode::InternalServerError_500, e.what());
