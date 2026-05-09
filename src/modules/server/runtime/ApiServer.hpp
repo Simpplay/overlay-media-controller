@@ -34,6 +34,7 @@ namespace omc::server
 	///                                 → 204 | 404
 	///
 	/// GET    /api/media/:id/show    – muestra la fuente de media en el overlay
+	///									Campos: fullscreen (boolean, opcional, default: false), position (string, opcional, formato: "x,y", default: "0,0"), size (string, opcional, formato: "width,height", default: "800,600")
 	///                                 → 200 { "status": "shown" } | 404
 	///
 	/// Códigos de error comunes

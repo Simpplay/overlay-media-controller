@@ -7,7 +7,7 @@
 #include "modules/ui/api/events/WindowOpenRequestedEvent.hpp"
 #include "modules/ui/domain/UiWindow.hpp"
 #include "modules/ui/domain/RenderTypes.hpp"
-#include "modules/ui/infraestructure/Win32Renderer.hpp"
+#include "modules/ui/infrastructure/Win32Renderer.hpp"
 
 #include "core/threading/api/ThreadPool.hpp"
 

@@ -8,10 +8,10 @@
 namespace omc::event {
     class WindowOpenRequestedEvent : public Event {
     public:
-        WindowOpenRequestedEvent(const omc::ui::window::UiWindow& window)
-            : window(window) {
+        explicit WindowOpenRequestedEvent(std::unique_ptr<omc::ui::window::UiWindow> w)
+            : window(std::move(w)) {
         }
 
-        const omc::ui::window::UiWindow& window;
+        std::unique_ptr<omc::ui::window::UiWindow> window;
     };
 }

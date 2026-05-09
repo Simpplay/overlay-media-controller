@@ -13,8 +13,8 @@ add_library(media
     "domain/Category.cpp"
     "domain/IMediaRepository.hpp"
 
-    "infraestructure/SqliteMediaRepository.hpp"
-    "infraestructure/SqliteMediaRepository.cpp"
+    "infrastructure/SqliteMediaRepository.hpp"
+    "infrastructure/SqliteMediaRepository.cpp"
 
     "runtime/MediaManager.hpp"
     "runtime/MediaManager.cpp"

@@ -10,11 +10,11 @@ add_library(ui
     "domain/RenderTypes.hpp"
     "domain/UiWindow.hpp"
 
-    "infraestructure/HitTest.hpp"
-    "infraestructure/WebViewRenderer.hpp"
-    "infraestructure/WebViewRenderer.cpp"
-    "infraestructure/Win32Renderer.hpp"
-    "infraestructure/Win32Renderer.cpp"
+    "infrastructure/HitTest.hpp"
+    "infrastructure/WebViewRenderer.hpp"
+    "infrastructure/WebViewRenderer.cpp"
+    "infrastructure/Win32Renderer.hpp"
+    "infrastructure/Win32Renderer.cpp"
 
     "runtime/UiManager.hpp"
     "runtime/UiManager.cpp"

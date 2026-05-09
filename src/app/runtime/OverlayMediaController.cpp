@@ -29,6 +29,7 @@ namespace omc::application
 			return;
 		}
 
+		mediaManager->init(eventBus);
 		uiManager.init(&threadPool);
 
 		apiServer = std::make_unique<omc::server::ApiServer>();

@@ -6,10 +6,7 @@ add_library(server
 target_include_directories(server 
     PUBLIC 
         ${PROJECT_SOURCE_DIR}/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/api
     PRIVATE 
-        ${CMAKE_CURRENT_SOURCE_DIR}/application
-        ${CMAKE_CURRENT_SOURCE_DIR}/infraestructure
         ${CMAKE_CURRENT_SOURCE_DIR}/runtime
 )
 

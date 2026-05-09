@@ -14,7 +14,7 @@ TEST(EventBusTest, BasicDispatch) {
         }
     );
 
-    bus.post(std::make_unique<omc::event::PlayMediaRequestedEvent>(1));
+    bus.post(std::make_unique<omc::event::PlayMediaRequestedEvent>(1, false, 800.0f, 600.0f, 800.0f, 600.0f));
     bus.processQueue();
 
     EXPECT_TRUE(called);

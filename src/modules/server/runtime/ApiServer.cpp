@@ -11,8 +11,7 @@
 
 #include "core/types/JsonSerializer.hpp"
 
-#include "modules/ui/api/events/WindowOpenRequestedEvent.hpp"
-#include "modules/ui/application/windows/WebViewWindow.hpp"
+#include "modules/media/api/events/PlayMediaRequestedEvent.hpp"
 
 namespace omc::server
 {
@@ -184,7 +183,7 @@ namespace omc::server
 	struct ApiServer::Impl
 	{
 		httplib::Server            server;
-		omc::event::EventBus& eventBus;
+		omc::event::EventBus&      eventBus;
 		omc::media::IMediaService& mediaService;
 		int                        port{ 0 };
 		std::thread                serverThread;
@@ -456,9 +455,20 @@ namespace omc::server
 					setCorsHeaders(res);
 					const int  id = extractId(req);
 
-					eventBus.emit(omc::event::WindowOpenRequestedEvent{
-						omc::ui::window::WebViewWindow("http://localhost:8080/media/" + std::to_string(id), {200, 150}, {960, 640})
-					});
+					const bool fullscreen = req.has_param("fullscreen") ? req.get_param_value("fullscreen") == "true" : false;
+					const std::string position = req.has_param("position") ? req.get_param_value("position") : "0,0";
+					const std::string size = req.has_param("size") ? req.get_param_value("size") : "960,640";
+
+					const float posX = std::stoi(position.substr(0, position.find(',')));
+					const float posY = std::stoi(position.substr(position.find(',') + 1));
+					const float sizeX = std::stoi(size.substr(0, size.find(',')));
+					const float sizeY = std::stoi(size.substr(size.find(',') + 1));
+
+					auto event = omc::event::PlayMediaRequestedEvent(
+						id, fullscreen, posX, posY, sizeX, sizeY
+					);
+
+					eventBus.post(std::make_unique<omc::event::PlayMediaRequestedEvent>(event));
 
 					res.set_content("{\"status\":\"shown\"}", "application/json");
 				}

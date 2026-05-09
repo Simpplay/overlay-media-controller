@@ -1,6 +1,6 @@
 #include "UiManager.hpp"
 
-#include "modules/ui/infraestructure/Win32Renderer.hpp"
+#include "modules/ui/infrastructure/Win32Renderer.hpp"
 
 #include <stdio.h>
 #include <algorithm>
@@ -52,7 +52,7 @@ namespace omc::ui
 
 	void UiManager::handleWindowOpenRequestedEvent(const omc::event::WindowOpenRequestedEvent& event)
 	{
-		auto window = event.window.clone();
+		auto window = event.window->clone();
 		window->setZBase(MAX_Z_INDEX_PER_WINDOW + static_cast<int>(windows.size()) * MAX_Z_INDEX_PER_WINDOW);
 		windows.push_back(std::move(window));
 	}

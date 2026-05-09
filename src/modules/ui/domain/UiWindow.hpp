@@ -9,6 +9,7 @@
 
 #include "modules/ui/domain/RenderTypes.hpp"
 #include "core/types/Constants.hpp"
+#include <iostream>
 
 namespace omc::ui::window
 {
@@ -52,6 +53,27 @@ namespace omc::ui::window
 			return isDragging || isResizing;
 		}
 
+		virtual void setMaximized(bool maximized)
+		{
+#if defined(_WIN32)
+			const float screenWidth = static_cast<float>(GetSystemMetrics(SM_CXSCREEN));
+			const float screenHeight = static_cast<float>(GetSystemMetrics(SM_CYSCREEN));
+
+			if (maximized) {
+				restorePos = position;
+				restoreSize = size;
+				position = { 0.0f, 0.0f };
+				size = { screenWidth, screenHeight };
+				isMaximized = true;
+			}
+			else {
+				position = restorePos;
+				size = restoreSize;
+				isMaximized = false;
+			}
+#endif
+		}
+
 		virtual void buildClientDrawCommand(std::vector<DrawCommand>& out) = 0;
 		virtual bool hasTitlebar() const { return true; }
 		bool closed() const { return isClosed; }
@@ -69,8 +91,8 @@ namespace omc::ui::window
 		bool isResizing{ false };
 		bool mouseWasDown{ false };
 		Vec2 dragOffset{};
-		Vec2 restorePos{};
-		Vec2 restoreSize{};
+		Vec2 restorePos{position};
+		Vec2 restoreSize{size};
 		Vec2 resizeAnchorMouse{};
 		Vec2 resizeAnchorSize{};
 		int zBase{ 10 };
@@ -158,23 +180,7 @@ namespace omc::ui::window
 
 		void toggleMaximize()
 		{
-#if defined(_WIN32)
-			const float screenWidth = static_cast<float>(GetSystemMetrics(SM_CXSCREEN));
-			const float screenHeight = static_cast<float>(GetSystemMetrics(SM_CYSCREEN));
-
-			if (!isMaximized) {
-				restorePos = position;
-				restoreSize = size;
-				position = { 0.0f, 0.0f };
-				size = { screenWidth, screenHeight };
-				isMaximized = true;
-			}
-			else {
-				position = restorePos;
-				size = restoreSize;
-				isMaximized = false;
-			}
-#endif
+			setMaximized(!isMaximized);
 		}
 	};
 }

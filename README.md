@@ -1,6 +1,6 @@
-# overlay-media-controller
+# Overlay Media Controller
 
-A C++ application that manages allways on top overlays through an HTTP REST API, using
+A C++ application that manages always-on-top overlays through an HTTP REST API, using
 **WebView2** for advanced web content rendering, **SQLite** for persistent storage, and
 **cpp-httplib** for the HTTP server.
 
@@ -9,9 +9,9 @@ A C++ application that manages allways on top overlays through an HTTP REST API,
 ## Dependencies
 
 | Library | Purpose |
-|---------|---------|
+|---|---|
 | [WebView2](https://developer.microsoft.com/es-es/microsoft-edge/webview2/) | Advanced web content rendering |
-| [SQLite 3](https://www.sqlite.org/) | Persist overlay configurations |
+| [SQLite 3](https://www.sqlite.org/) | Persistent storage for media and overlay data |
 | [cpp-httplib](https://github.com/yhirose/cpp-httplib) | Embedded HTTP/1.1 server |
 | [gtest](https://github.com/google/googletest) | Unit testing framework |
 
@@ -19,17 +19,21 @@ A C++ application that manages allways on top overlays through an HTTP REST API,
 
 ## Building
 
-The binary is produced at `build/overlay-media-controller`.
+The binary is generated at:
+
+```bash
+build/overlay-media-controller
+```
 
 ### Using vcpkg
 
-The `vcpkg.json` manifest lists all dependencies so that vcpkg can
-install them automatically when the toolchain file is passed to CMake:
+The project uses a `vcpkg.json` manifest so dependencies can be installed automatically when using the vcpkg CMake toolchain.
 
 ```bash
 cmake -B build \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_TOOLCHAIN_FILE=/path/to/vcpkg/scripts/buildsystems/vcpkg.cmake
+
 cmake --build build --parallel
 ```
 
@@ -37,33 +41,61 @@ cmake --build build --parallel
 
 ## Running
 
+### Default configuration
+
 ```bash
-# Default: database file "overlays.db", port 8080
 ./build/overlay-media-controller
+```
 
-# Custom database path and port via CLI arguments
+Uses:
+- Database: `overlays.db`
+- Port: `8080`
+
+### Custom database path and port
+
+```bash
 ./build/overlay-media-controller /var/db/overlays.db 9090
+```
 
-# Or via environment variables
-OMC_DB_PATH=/var/db/overlays.db OMC_PORT=9090 ./build/overlay-media-controller
+### Using environment variables
+
+```bash
+OMC_DB_PATH=/var/db/overlays.db \
+OMC_PORT=9090 \
+./build/overlay-media-controller
 ```
 
 ---
 
+# API Reference
 
-## API Reference
+All responses use:
 
-All responses are `application/json`.
+```http
+Content-Type: application/json
+```
+
+Base URL:
+
+```txt
+http://localhost:8080
+```
 
 ---
 
-### Health check
+# Health Check
+
+Used to verify that the HTTP server is running.
+
+## Request
 
 ```http
 GET /health
 ```
 
-Response:
+## Response
+
+### 200 OK
 
 ```json
 {
@@ -73,29 +105,39 @@ Response:
 
 ---
 
-## Media sources
+# Media
+
+Media resources represent uploaded multimedia assets such as videos, audio files, images, or GIFs.
+
+## Endpoints Summary
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/media` | List all media sources |
-| `POST` | `/api/media` | Add a new media source |
-| `GET` | `/api/media/:id` | Get a single media source |
-| `DELETE` | `/api/media/:id` | Delete a media source |
-| `GET` | `/api/media/:id/show` | Show the media source in an overlay |
+| `GET` | `/api/media` | List media |
+| `POST` | `/api/media` | Upload media |
+| `GET` | `/api/media/:id` | Retrieve a single media |
+| `DELETE` | `/api/media/:id` | Delete media |
+| `GET` | `/api/media/:id/thumbnail` | Retrieve media thumbnail |
 
 ---
 
-### POST /api/media
+## Upload Media
 
-Add a new media source.
+Uploads a new media file into the library.
 
-Request:
-- Content-Type: `multipart/form-data`
+### Request
 
-Response:
-- Content-Type: `application/json`
+```http
+POST /api/media
+```
 
-#### Form fields
+### Content Type
+
+```http
+multipart/form-data
+```
+
+### Form Fields
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -103,7 +145,7 @@ Response:
 | `title` | string | No | Display title |
 | `description` | string | No | Media description |
 
-#### Example request
+### Example
 
 ```bash
 curl -X POST http://localhost:8080/api/media \
@@ -112,7 +154,9 @@ curl -X POST http://localhost:8080/api/media \
   -F "description=Test upload"
 ```
 
-#### Example response
+### Response
+
+#### 201 Created
 
 ```json
 {
@@ -125,11 +169,34 @@ curl -X POST http://localhost:8080/api/media \
 
 ---
 
-### GET /api/media
+## List Media
 
-List all media sources.
+Returns all stored media.
 
-Response:
+Optional query parameters can be used for filtering.
+
+### Request
+
+```http
+GET /api/media
+```
+
+### Optional Query Parameters
+
+| Parameter | Description |
+|---|---|
+| `query` | Filter media by title |
+| `category` | Filter media by category |
+
+### Example
+
+```http
+GET /api/media?query=demo&category=Videos
+```
+
+### Response
+
+#### 200 OK
 
 ```json
 [
@@ -137,59 +204,308 @@ Response:
         "id": 1,
         "title": "Demo Video",
         "filename": "video.mp4",
-        "content_type": "video/mp4"
+        "content_type": "video/mp4",
+        "categories": [
+            "Videos"
+        ]
     }
 ]
 ```
 
 ---
 
-### GET /api/media/:id
+## Get Media
 
-Get a single media source.
+Returns a single media resource.
 
-#### Example response
+### Request
+
+```http
+GET /api/media/:id
+```
+
+### Response
+
+#### 200 OK
 
 ```json
 {
     "id": 1,
     "title": "Demo Video",
     "filename": "video.mp4",
-    "content_type": "video/mp4"
+    "content_type": "video/mp4",
+    "categories": [
+        "Videos"
+    ]
 }
 ```
 
 ---
 
-### DELETE /api/media/:id
+## Delete Media
 
-Delete a media source.
+Deletes a media resource.
 
-#### Example response
+### Request
+
+```http
+DELETE /api/media/:id
+```
+
+### Response
+
+#### 204 No Content
+
+---
+
+## Get Media Thumbnail
+
+Returns the thumbnail associated with a media resource.
+
+### Request
+
+```http
+GET /api/media/:id/thumbnail
+```
+
+### Response
+
+#### 200 OK
 
 ```json
 {
-    "status": "deleted"
+    "thumbnail_url": "/thumbnails/1.png"
 }
 ```
 
 ---
 
-### GET /api/media/:id/show
+# Categories
 
-Show the media source in an overlay.
+Categories are used to organize media into logical groups.
 
-Request:
-- Content-Type: `application/json`
+## Endpoints Summary
 
-Response:
-- Content-Type: `application/json`
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/categories` | List categories |
+| `POST` | `/api/categories` | Create category |
+| `GET` | `/api/categories/:id` | Retrieve category |
+| `DELETE` | `/api/categories/:id` | Delete category |
+| `PUT` | `/api/categories/:id/media/:media_id` | Add media to category |
+| `DELETE` | `/api/categories/:id/media/:media_id` | Remove media from category |
 
-#### Request body
+---
+
+## Create Category
+
+Creates a new category.
+
+### Request
+
+```http
+POST /api/categories
+```
+
+### Request Body
 
 ```json
 {
-    "fullscreen": true,
+    "name": "Videos"
+}
+```
+
+### Response
+
+#### 201 Created
+
+```json
+{
+    "id": 1,
+    "name": "Videos"
+}
+```
+
+---
+
+## List Categories
+
+Returns all categories.
+
+### Request
+
+```http
+GET /api/categories
+```
+
+### Response
+
+#### 200 OK
+
+```json
+[
+    {
+        "id": 1,
+        "name": "Videos"
+    }
+]
+```
+
+---
+
+## Get Category
+
+Returns a category and all associated media.
+
+### Request
+
+```http
+GET /api/categories/:id
+```
+
+### Response
+
+#### 200 OK
+
+```json
+{
+    "id": 1,
+    "name": "Videos",
+    "media": [
+        {
+            "id": 1,
+            "title": "Demo Video",
+            "filename": "video.mp4",
+            "content_type": "video/mp4"
+        }
+    ]
+}
+```
+
+---
+
+## Delete Category
+
+Deletes a category.
+
+### Request
+
+```http
+DELETE /api/categories/:id
+```
+
+### Response
+
+#### 204 No Content
+
+---
+
+## Add Media to Category
+
+Associates a media resource with a category.
+
+### Request
+
+```http
+PUT /api/categories/:id/media/:media_id
+```
+
+### Response
+
+#### 200 OK
+
+```json
+{
+    "status": "added"
+}
+```
+
+---
+
+## Remove Media from Category
+
+Removes a media resource from a category.
+
+### Request
+
+```http
+DELETE /api/categories/:id/media/:media_id
+```
+
+### Response
+
+#### 204 No Content
+
+---
+
+# Overlays
+
+Overlays are runtime instances that render media on screen.
+
+A single media resource can be displayed in multiple overlays simultaneously.
+
+## Endpoints Summary
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/overlays` | List active overlays |
+| `POST` | `/api/overlays` | Create overlay |
+| `PATCH` | `/api/overlays/:id` | Update overlay |
+| `DELETE` | `/api/overlays/:id` | Close overlay |
+
+---
+
+## List Active Overlays
+
+Returns all active overlays currently displayed.
+
+### Request
+
+```http
+GET /api/overlays
+```
+
+### Response
+
+#### 200 OK
+
+```json
+[
+    {
+        "id": 1,
+        "media_id": 1,
+        "state": "active",
+        "fullscreen": false,
+        "position": {
+            "x": 100,
+            "y": 100
+        },
+        "size": {
+            "width": 800,
+            "height": 600
+        }
+    }
+]
+```
+
+---
+
+## Create Overlay
+
+Creates a new overlay instance and displays media on screen.
+
+### Request
+
+```http
+POST /api/overlays
+```
+
+### Request Body
+
+```json
+{
+    "media_id": 1,
+    "fullscreen": false,
     "position": {
         "x": 100,
         "y": 100
@@ -201,32 +517,95 @@ Response:
 }
 ```
 
-#### Example response
+### Response
+
+#### 201 Created
 
 ```json
 {
-    "status": "shown"
+    "id": 1,
+    "media_id": 1,
+    "state": "active"
 }
 ```
 
 ---
 
-## Project structure
+## Update Overlay
 
+Updates overlay runtime properties such as position, size, or fullscreen mode.
+
+### Request
+
+```http
+PATCH /api/overlays/:id
 ```
+
+### Example Request Body
+
+```json
+{
+    "fullscreen": true
+}
+```
+
+or
+
+```json
+{
+    "position": {
+        "x": 300,
+        "y": 200
+    }
+}
+```
+
+### Response
+
+#### 200 OK
+
+```json
+{
+    "id": 1,
+    "state": "updated"
+}
+```
+
+---
+
+## Close Overlay
+
+Closes an active overlay instance.
+
+### Request
+
+```http
+DELETE /api/overlays/:id
+```
+
+### Response
+
+#### 204 No Content
+
+---
+
+# Project Structure
+
+```txt
 overlay-media-controller/
-├── CMakeLists.txt          # CMake build definition
-├── vcpkg.json              # vcpkg dependency manifest
-├── tests/                  # Unit tests
+├── CMakeLists.txt
+├── vcpkg.json
+├── tests/
 └── src/
-    ├── app/                # App entry point and main loop
-    ├── core/               # Core logic for event handling and types
-    ├── infra/              # Specific implementations for WebView2, SQLite, and cpp-httplib
-    ├─- shared/             # Shared utilities and helper functions 
+    ├── app/
+    ├── core/
     └── modules/
-        ├── input/          # Shortcuts and global hotkeys
-        ├── media/          # Media probing and playback logic
-        ├── server/         # HTTP server and API handlers
-        ├── storage/        # Persistent storage management
-        └── ui/             # Overlay management logic
+        ├── media/
+        ├── server/
+        └── ui/
+            ├── api/
+            ├── application/
+            ├── domain/
+            ├── infrastructure/
+            └── runtime/
 ```
