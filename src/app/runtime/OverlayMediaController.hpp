@@ -28,7 +28,7 @@ namespace omc::application
 		omc::ui::UiManager uiManager{ eventBus };
 
 		std::unique_ptr<omc::media::MediaManager> mediaManager;
-		std::shared_ptr<omc::media::SqliteMediaRepository> mediaRepository = std::make_shared<omc::media::SqliteMediaRepository>();
+		std::shared_ptr<omc::media::SqliteMediaRepository> mediaRepository = std::make_shared<omc::media::SqliteMediaRepository>("./media-storage");
 		omc::media::MediaService mediaService{ mediaRepository };
 
 		std::unique_ptr<omc::server::ApiServer> apiServer;

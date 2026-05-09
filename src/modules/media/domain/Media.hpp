@@ -6,12 +6,16 @@
 
 namespace omc::media
 {
-	struct Media 
-	{
-		uint64_t id;
-		std::string title;
-		std::string filename;
-		std::string contentType;
-		std::vector<std::byte> data;
-	};
+    struct Media
+    {
+        int id = 0;
+
+        std::string title;
+        std::string filename;
+        std::string filepath;
+        std::string contentType;
+
+        // Opcional:
+        uint64_t size = 0;
+    };
 }

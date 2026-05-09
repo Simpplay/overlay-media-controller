@@ -1,5 +1,11 @@
 #include "SqliteMediaRepository.hpp"
 
+#include <fstream>
+#include <filesystem>
+#include <chrono>
+
+#include <iostream>
+
 namespace omc::media
 {
 	Media SqliteMediaRepository::getMediaById(int id)
@@ -9,7 +15,11 @@ namespace omc::media
 		}
 
 		const char* sql = R"(
-			SELECT id, filename, contentType, data
+			SELECT
+				id,
+				filename,
+				filepath,
+				contentType
 			FROM media
 			WHERE id = ?;
 		)";
@@ -25,26 +35,37 @@ namespace omc::media
 		Media media;
 
 		if (sqlite3_step(stmt) == SQLITE_ROW) {
+
 			media.id = sqlite3_column_int(stmt, 0);
 
-			const unsigned char* filenameText = sqlite3_column_text(stmt, 1);
-			const unsigned char* contentTypeText = sqlite3_column_text(stmt, 2);
+			auto filename =
+				sqlite3_column_text(stmt, 1);
 
-			if (filenameText) {
-				media.filename = reinterpret_cast<const char*>(filenameText);
+			auto filepath =
+				sqlite3_column_text(stmt, 2);
+
+			auto contentType =
+				sqlite3_column_text(stmt, 3);
+
+			if (filename) {
+				media.filename =
+					reinterpret_cast<const char*>(filename);
 			}
 
-			if (contentTypeText) {
-				media.contentType = reinterpret_cast<const char*>(contentTypeText);
+			if (filepath) {
+				media.filepath =
+					reinterpret_cast<const char*>(filepath);
 			}
 
-			const std::byte* blobData =
-				reinterpret_cast<const std::byte*>(sqlite3_column_blob(stmt, 3));
+			if (contentType) {
+				media.contentType =
+					reinterpret_cast<const char*>(contentType);
+			}
 
-			int blobSize = sqlite3_column_bytes(stmt, 3);
-
-			if (blobData && blobSize > 0) {
-				media.data.assign(blobData, blobData + blobSize);
+			// Obtener tamaño real del archivo
+			if (std::filesystem::exists(media.filepath)) {
+				media.size =
+					std::filesystem::file_size(media.filepath);
 			}
 		}
 
@@ -62,7 +83,11 @@ namespace omc::media
 		}
 
 		const char* sql = R"(
-			SELECT id, filename, contentType, data
+			SELECT
+				id,
+				filename,
+				filepath,
+				contentType
 			FROM media;
 		)";
 
@@ -73,28 +98,41 @@ namespace omc::media
 		}
 
 		while (sqlite3_step(stmt) == SQLITE_ROW) {
+
 			Media media;
 
-			media.id = sqlite3_column_int(stmt, 0);
+			media.id =
+				sqlite3_column_int(stmt, 0);
 
-			const unsigned char* filenameText = sqlite3_column_text(stmt, 1);
-			const unsigned char* contentTypeText = sqlite3_column_text(stmt, 2);
+			const unsigned char* filenameText =
+				sqlite3_column_text(stmt, 1);
+
+			const unsigned char* filepathText =
+				sqlite3_column_text(stmt, 2);
+
+			const unsigned char* contentTypeText =
+				sqlite3_column_text(stmt, 3);
 
 			if (filenameText) {
-				media.filename = reinterpret_cast<const char*>(filenameText);
+				media.filename =
+					reinterpret_cast<const char*>(filenameText);
+			}
+
+			if (filepathText) {
+				media.filepath =
+					reinterpret_cast<const char*>(filepathText);
 			}
 
 			if (contentTypeText) {
-				media.contentType = reinterpret_cast<const char*>(contentTypeText);
+				media.contentType =
+					reinterpret_cast<const char*>(contentTypeText);
 			}
 
-			const std::byte* blobData =
-				reinterpret_cast<const std::byte*>(sqlite3_column_blob(stmt, 3));
+			// Obtener tamaño real
+			if (std::filesystem::exists(media.filepath)) {
 
-			int blobSize = sqlite3_column_bytes(stmt, 3);
-
-			if (blobData && blobSize > 0) {
-				media.data.assign(blobData, blobData + blobSize);
+				media.size =
+					std::filesystem::file_size(media.filepath);
 			}
 
 			result.push_back(std::move(media));
@@ -114,14 +152,52 @@ namespace omc::media
 			return Media();
 		}
 
+		// Generar nombre único
+		auto timestamp =
+			std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::system_clock::now().time_since_epoch())
+			.count();
+
+		std::string storedFilename =
+			std::to_string(timestamp) + "_" + filename;
+
+		auto fullPath = mediaRoot_ / storedFilename;
+
+		std::cout << "Storing media file: " << fullPath << "\n";
+
+		// Guardar archivo
+		{
+			std::ofstream file(fullPath, std::ios::binary);
+
+			if (!file.is_open()) {
+				std::cout << "Failed to open file for writing: " << fullPath << "\n";
+				return Media();
+			}
+
+			file.write(
+				reinterpret_cast<const char*>(data.data()),
+				static_cast<std::streamsize>(data.size()));
+
+			if (!file.good()) {
+				std::cout << "Failed to write data to file: " << fullPath << "\n";
+				return Media();
+			}
+		}
+
 		const char* sql = R"(
-			INSERT INTO media (filename, contentType, data)
+			INSERT INTO media (
+				filename,
+				filepath,
+				contentType
+			)
 			VALUES (?, ?, ?);
 		)";
 
 		sqlite3_stmt* stmt = nullptr;
 
 		if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+			std::filesystem::remove(fullPath);
+			std::cout << "Failed to prepare SQL statement: " << sqlite3_errmsg(db_) << "\n";
 			return Media();
 		}
 
@@ -129,41 +205,52 @@ namespace omc::media
 			stmt,
 			1,
 			filename.c_str(),
-			static_cast<int>(filename.size()),
+			-1,
 			SQLITE_TRANSIENT);
 
 		sqlite3_bind_text(
 			stmt,
 			2,
-			contentType.c_str(),
-			static_cast<int>(contentType.size()),
+			fullPath.string().c_str(),
+			-1,
 			SQLITE_TRANSIENT);
 
-		sqlite3_bind_blob(
+		sqlite3_bind_text(
 			stmt,
 			3,
-			data.data(),
-			static_cast<int>(data.size()),
+			contentType.c_str(),
+			-1,
 			SQLITE_TRANSIENT);
 
 		if (sqlite3_step(stmt) != SQLITE_DONE) {
 			sqlite3_finalize(stmt);
+			std::filesystem::remove(fullPath);
 			return Media();
 		}
 
 		sqlite3_finalize(stmt);
 
 		Media media;
-		media.id = static_cast<int>(sqlite3_last_insert_rowid(db_));
+
+		media.id = static_cast<int>(
+			sqlite3_last_insert_rowid(db_));
+
 		media.filename = filename;
+		media.filepath = fullPath.string();
 		media.contentType = contentType;
-		media.data = data;
+		media.size = data.size();
 
 		return media;
 	}
 
 	bool SqliteMediaRepository::deleteMediaById(int id)
 	{
+		auto media = getMediaById(id);
+
+		if (media.id == 0) {
+			return false;
+		}
+
 		if (!db_) {
 			return false;
 		}
@@ -181,11 +268,20 @@ namespace omc::media
 
 		sqlite3_bind_int(stmt, 1, id);
 
-		bool success = (sqlite3_step(stmt) == SQLITE_DONE);
+		bool success =
+			(sqlite3_step(stmt) == SQLITE_DONE);
 
 		sqlite3_finalize(stmt);
 
-		return success && sqlite3_changes(db_) > 0;
+		if (!success) {
+			return false;
+		}
+
+		if (std::filesystem::exists(media.filepath)) {
+			std::filesystem::remove(media.filepath);
+		}
+
+		return sqlite3_changes(db_) > 0;
 	}
 
 	bool SqliteMediaRepository::setupDatabase(const std::string& dbPath, std::string& out)
@@ -221,8 +317,8 @@ namespace omc::media
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				title TEXT,
 				filename TEXT,
-				contentType TEXT,
-				data BLOB
+				filepath TEXT NOT NULL,
+				contentType TEXT
 			);
 		)";
 
@@ -235,6 +331,12 @@ namespace omc::media
 		}
 
 		return true;
+	}
+
+	SqliteMediaRepository::SqliteMediaRepository(const std::filesystem::path& mediaRoot)
+		: mediaRoot_(std::filesystem::absolute(mediaRoot))
+	{
+		std::filesystem::create_directories(mediaRoot_);
 	}
 
 	SqliteMediaRepository::~SqliteMediaRepository()

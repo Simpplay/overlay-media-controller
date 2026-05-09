@@ -263,7 +263,7 @@ namespace omc::server
 						setError(res, httplib::StatusCode::NotFound_404, "Media source not found");
 						return;
 					}
-					res.status = httplib::StatusCode::NoContent_204;
+					res.status = httplib::StatusCode::OK_200;
 				}
 				catch (const std::invalid_argument&) {
 					setError(res, httplib::StatusCode::BadRequest_400, "Invalid ID format");

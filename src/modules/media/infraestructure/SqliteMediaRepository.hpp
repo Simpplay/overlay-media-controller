@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sqlite3.h>
+#include <filesystem>
 
 #include "modules/media/domain/IMediaRepository.hpp"
 
@@ -9,7 +10,7 @@ namespace omc::media
 	class SqliteMediaRepository : public IMediaRepository
 	{
 	public:
-		SqliteMediaRepository() = default;
+		SqliteMediaRepository(const std::filesystem::path& mediaRoot);
 		~SqliteMediaRepository();
 
 		bool setupDatabase(const std::string& dbPath, std::string& out);
@@ -24,5 +25,7 @@ namespace omc::media
 	private:
 		sqlite3* db_ = nullptr;
 		std::string dbPath_;
+
+		std::filesystem::path mediaRoot_;
 	};
 }
