@@ -13,6 +13,16 @@ namespace omc::media
 				media.contentType
 			};
 		}
+
+		MediaFileDto mediaToFileDto(const Media& media) {
+			return MediaFileDto{
+				static_cast<int>(media.id),
+				media.filename,
+				media.filepath,
+				media.contentType,
+				media.size
+			};
+		}
 	};
 
 	MediaService::MediaService(std::shared_ptr<IMediaRepository> repository)
@@ -41,7 +51,19 @@ namespace omc::media
 	}
 
 	std::optional<MediaSourceDto> MediaService::getMediaSourceById(int id) {
-		return impl_->mediaSourceToDto(repository_->getMediaById(id));
+		const auto media = repository_->getMediaById(id);
+		if (media.id == 0) {
+			return std::nullopt;
+		}
+		return impl_->mediaSourceToDto(media);
+	}
+
+	std::optional<MediaFileDto> MediaService::getMediaFileById(int id) {
+		const auto media = repository_->getMediaById(id);
+		if (media.id == 0) {
+			return std::nullopt;
+		}
+		return impl_->mediaToFileDto(media);
 	}
 
 	bool MediaService::deleteMediaSourceById(int id) {

@@ -14,6 +14,15 @@ namespace omc::media
 		std::string contentType;
 	};
 
+	struct MediaFileDto
+	{
+		int id;
+		std::string filename;
+		std::string filepath;
+		std::string contentType;
+		uint64_t size;
+	};
+
     inline std::string to_json(const MediaSourceDto& dto)
     {
         using omc::json::JsonSerializer;
