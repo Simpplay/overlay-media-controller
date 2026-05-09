@@ -4,12 +4,16 @@ add_library(media
     "api/events/MediaStartedEvent.hpp"
     "api/events/PlayMediaRequestedEvent.hpp"
 
+    "application/MediaService.hpp"
     "application/MediaService.cpp"
 
+    "domain/Media.hpp"
     "domain/Media.cpp"
+    "domain/Category.hpp"
     "domain/Category.cpp"
     "domain/IMediaRepository.hpp"
 
+    "infraestructure/SqliteMediaRepository.hpp"
     "infraestructure/SqliteMediaRepository.cpp"
 
     "runtime/MediaManager.hpp"
@@ -28,5 +32,5 @@ target_include_directories(media
 )
 
 target_link_libraries(media
-    PUBLIC core
+    PUBLIC core unofficial::sqlite3::sqlite3
 )

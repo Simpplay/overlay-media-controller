@@ -22,11 +22,18 @@ namespace omc::application
 			close();
 		});
 
+		std::string dbError;
+		if (!mediaRepository->setupDatabase(dbPath, dbError)) {
+			std::cerr << "Failed to setup database: " << dbPath << "\n";
+			std::cerr << "Error: " << dbError << "\n";
+			return;
+		}
+
 		uiManager.init(&threadPool);
 
 		apiServer = std::make_unique<omc::server::ApiServer>();
-		threadPool.enqueue([this, port]() {
-			apiServer->start(port, eventBus);
+		apiThread = std::thread([this, port]() {
+			apiServer->start(port, eventBus, mediaService);
 		});
 
 		std::cout << "Listening on: http://0.0.0.0:" << port << "\n";
@@ -48,6 +55,12 @@ namespace omc::application
 
 		if (apiServer)
 			apiServer->stop();
+
+		if (apiThread.joinable())
+			apiThread.join();
+
+		if (mediaRepository)
+			mediaRepository->closeDatabase();
 
 		running = false;
 	}
