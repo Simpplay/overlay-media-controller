@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#include "core/event/infraestructure/EventBus.hpp"
+#include "core/event/api/EventBus.hpp"
 
 #include "modules/ui/api/events/WindowOpenRequestedEvent.hpp"
 #include "modules/ui/domain/UiWindow.hpp"

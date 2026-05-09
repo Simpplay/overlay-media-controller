@@ -13,7 +13,7 @@
 #include <dwrite.h>
 
 #include "modules/ui/domain/RenderTypes.hpp"
-#include "core/event/api/IEventBus.hpp"
+#include "core/event/api/EventBus.hpp"
 #include "core/event/api/events/ExitApplicationRequestedEvent.hpp"
 #include "modules/ui/infraestructure/HitTest.hpp"
 

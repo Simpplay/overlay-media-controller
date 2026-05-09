@@ -13,7 +13,7 @@
 using EventHandler = std::function<void(const omc::event::Event&)>;
 
 namespace omc::event
-{ 
+{
 	class EventBus
 	{
 	public:
@@ -22,7 +22,7 @@ namespace omc::event
 		{
 			auto wrapper = [handler](const Event& e) {
 				handler(static_cast<const T&>(e));
-			};
+				};
 
 			subscribers[std::type_index(typeid(T))].push_back(wrapper);
 		}
@@ -32,7 +32,7 @@ namespace omc::event
 
 		void processQueue();
 
-	private:
+	protected:
 		std::unordered_map<std::type_index, std::vector<EventHandler>> subscribers{};
 
 		std::queue<std::unique_ptr<Event>> queue{};
