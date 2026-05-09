@@ -4,11 +4,15 @@
 #include <fstream>
 #include <httplib.h>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <string_view>
 #include <unordered_map>
 
 #include "core/types/JsonSerializer.hpp"
+
+#include "modules/ui/api/events/WindowOpenRequestedEvent.hpp"
+#include "modules/ui/application/windows/WebViewWindow.hpp"
 
 namespace omc::server
 {
@@ -45,39 +49,60 @@ namespace omc::server
 		);
 	}
 
+	// ---------------------------------------------------------------------------
+	// Helper – añade headers CORS permisivos.
+	// Necesario cuando el HTML se sirve desde un origen distinto (file://, otro
+	// puerto, etc.) y el navegador realiza peticiones cross-origin al servidor.
+	// ---------------------------------------------------------------------------
+	static void setCorsHeaders(httplib::Response& res)
+	{
+		res.set_header("Access-Control-Allow-Origin",  "*");
+		res.set_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+		res.set_header("Access-Control-Allow-Headers", "Content-Type, Range");
+		res.set_header("Access-Control-Expose-Headers",
+		               "Content-Length, Content-Range, Accept-Ranges");
+	}
+
+	// ---------------------------------------------------------------------------
+	// Parsea el valor del header "Range: bytes=start-end".
+	// Soporta las tres formas del RFC 7233:
+	//   bytes=500-999     → rango cerrado
+	//   bytes=500-        → desde 500 hasta el final
+	//   bytes=-500        → últimos 500 bytes
+	// Devuelve false si el rango es inválido o no satisfacible.
+	// ---------------------------------------------------------------------------
 	static bool parseRangeHeader(
 		const std::string& value,
-		size_t totalSize,
-		size_t& start,
-		size_t& end)
+		size_t             totalSize,
+		size_t&            start,
+		size_t&            end)
 	{
 		if (!value.starts_with("bytes=") || totalSize == 0) {
 			return false;
 		}
 
-		const auto spec = value.substr(6);
-		const auto dash = spec.find('-');
+		const auto spec  = value.substr(6);
+		const auto dash  = spec.find('-');
 		if (dash == std::string::npos) {
 			return false;
 		}
 
 		const auto startToken = spec.substr(0, dash);
-		const auto endToken = spec.substr(dash + 1);
+		const auto endToken   = spec.substr(dash + 1);
 
 		try {
 			if (startToken.empty()) {
+				// suffix-length: "bytes=-N"
 				const size_t suffixLen = static_cast<size_t>(std::stoull(endToken));
-				if (suffixLen == 0) {
-					return false;
-				}
+				if (suffixLen == 0) return false;
 				start = (suffixLen >= totalSize) ? 0 : totalSize - suffixLen;
-				end = totalSize - 1;
+				end   = totalSize - 1;
 			}
 			else {
 				start = static_cast<size_t>(std::stoull(startToken));
-				end = endToken.empty()
-					? (totalSize - 1)
-					: static_cast<size_t>(std::stoull(endToken));
+				end   = endToken.empty()
+				        ? (totalSize - 1)
+				        : static_cast<size_t>(std::stoull(endToken));
 			}
 		}
 		catch (...) {
@@ -110,7 +135,7 @@ namespace omc::server
 	// útil; cualquier tipo específico que venga del cliente se respeta tal cual.
 	// ---------------------------------------------------------------------------
 	static std::string inferMimeType(const std::string& filename,
-		const std::string& declared)
+	                                 const std::string& declared)
 	{
 		constexpr std::string_view kGeneric = "application/octet-stream";
 
@@ -193,10 +218,19 @@ namespace omc::server
 				res.set_content("{\"status\":\"ok\"}", "application/json");
 				});
 
+			// ── OPTIONS preflight – CORS ───────────────────────────────────
+			// Los navegadores envían un preflight OPTIONS antes de peticiones
+			// cross-origin con headers personalizados (ej: Range).
+			server.Options(R"(.*)", [](const httplib::Request&, httplib::Response& res) {
+				setCorsHeaders(res);
+				res.status = httplib::StatusCode::NoContent_204;
+				});
+
 			// ── GET /api/media ─────────────────────────────────────────────
 			// Lista todas las fuentes de media.
 			server.Get("/api/media", [this](const httplib::Request&, httplib::Response& res) {
 				try {
+					setCorsHeaders(res);
 					auto sources = mediaService.getAllMediaSources();
 					res.set_content(omc::json::JsonSerializer::serialize(sources), "application/json");
 				}
@@ -205,81 +239,97 @@ namespace omc::server
 				}
 				});
 
+			// ── GET /media/:id ─────────────────────────────────────────────
+			// Sirve el fichero binario con soporte completo de Range requests
+			// (RFC 7233) para que los navegadores puedan hacer seek en vídeos.
 			server.Get(R"(/media/(\d+))", [this](const httplib::Request& req, httplib::Response& res) {
 				try {
+					setCorsHeaders(res);
+
 					const int id = extractId(req);
-					auto media = mediaService.getMediaFileById(id);
+					auto media   = mediaService.getMediaFileById(id);
+
 					if (!media) {
 						setError(res, httplib::StatusCode::NotFound_404, "Media source not found");
 						return;
 					}
 
-					const auto& path = media->filepath;
-					std::ifstream file(path, std::ios::binary | std::ios::ate);
-					if (!file) {
+					// ── Abrir el fichero UNA vez ───────────────────────────
+					const std::string filePath = media->filepath;
+					auto streamPtr = std::make_shared<std::ifstream>(
+					    filePath, std::ios::binary | std::ios::ate);
+
+					if (!*streamPtr) {
 						setError(res, httplib::StatusCode::NotFound_404, "Media file not found");
 						return;
 					}
 
-					const size_t totalSize = static_cast<size_t>(file.tellg());
-					file.close();
+					const size_t totalSize = static_cast<size_t>(streamPtr->tellg());
+					// Volver al inicio; la posición concreta se fijará en el provider.
+					streamPtr->seekg(0, std::ios::beg);
+
+					// ── MIME type ──────────────────────────────────────────
+					const std::string contentType =
+					    inferMimeType(media->filename, media->contentType);
+
+					// ── Headers generales ──────────────────────────────────
 					res.set_header("Accept-Ranges", "bytes");
 
-					size_t start = 0;
-					size_t end = totalSize > 0 ? totalSize - 1 : 0;
-					bool partial = false;
+					// ── Calcular rango ─────────────────────────────────────
+					size_t start   = 0;
+					size_t end     = totalSize > 0 ? totalSize - 1 : 0;
+					bool   partial = false;
 
 					const auto rangeHeader = req.get_header_value("Range");
 					if (!rangeHeader.empty()) {
 						if (!parseRangeHeader(rangeHeader, totalSize, start, end)) {
 							res.status = httplib::StatusCode::RangeNotSatisfiable_416;
-							res.set_header("Content-Range", "bytes */" + std::to_string(totalSize));
+							res.set_header("Content-Range",
+							               "bytes */" + std::to_string(totalSize));
 							return;
 						}
 						partial = true;
 					}
 
-					const size_t chunkSize = (totalSize == 0) ? 0 : (end - start + 1);
-					res.status = partial ? httplib::StatusCode::PartialContent_206 : httplib::StatusCode::OK_200;
-					res.set_header("Content-Type", media->contentType);
-					res.set_header("Content-Length", std::to_string(chunkSize));
+					const size_t chunkSize =
+					    (totalSize == 0) ? 0 : (end - start + 1);
+
+					res.status = partial
+					    ? httplib::StatusCode::PartialContent_206
+					    : httplib::StatusCode::OK_200;
+
 					if (partial) {
 						res.set_header("Content-Range",
-							"bytes " + std::to_string(start) + "-" + std::to_string(end) + "/" + std::to_string(totalSize));
+						    "bytes " + std::to_string(start) +
+						    "-"      + std::to_string(end)   +
+						    "/"      + std::to_string(totalSize));
 					}
 
+					// ── Content provider ───────────────────────────────────
+					streamPtr->seekg(0, std::ios::end);
+					const size_t totalFileSize = static_cast<size_t>(streamPtr->tellg());
+					streamPtr->seekg(0, std::ios::beg);
+
+					constexpr size_t BUFFER_SIZE = 64 * 1024;
+					auto bufferPtr = std::make_shared<std::vector<char>>(BUFFER_SIZE);
+
 					res.set_content_provider(
-						chunkSize,
-						media->contentType,
-						[path, start, end](size_t offset, size_t length, httplib::DataSink& sink) {
-							std::ifstream stream(path, std::ios::binary);
-							if (!stream) {
-								return false;
-							}
+						totalFileSize,
+						contentType,
+						[streamPtr, bufferPtr](size_t offset, size_t length, httplib::DataSink& sink) -> bool
+						{
+							streamPtr->seekg(static_cast<std::streamoff>(offset));
 
-							const size_t readStart = start + offset;
-							if (readStart > end) {
-								sink.done();
-								return true;
-							}
+							const size_t toRead = std::min(length, size_t{ BUFFER_SIZE });
 
-							const size_t remaining = (end - readStart) + 1;
-							const size_t toRead = std::min(length, remaining);
-							std::string buffer(toRead, '\0');
-
-							stream.seekg(static_cast<std::streamoff>(readStart));
-							stream.read(buffer.data(), static_cast<std::streamsize>(toRead));
-							const size_t bytesRead = static_cast<size_t>(stream.gcount());
+							streamPtr->read(bufferPtr->data(), static_cast<std::streamsize>(toRead));
+							const size_t bytesRead = static_cast<size_t>(streamPtr->gcount());
 
 							if (bytesRead == 0) {
-								return false;
+								return false; // Archivo terminado o error de disco
 							}
 
-							sink.write(buffer.data(), bytesRead);
-							if (bytesRead < toRead || (readStart + bytesRead - 1) >= end) {
-								sink.done();
-							}
-							return true;
+							return sink.write(bufferPtr->data(), bytesRead);
 						});
 				}
 				catch (const std::invalid_argument&) {
@@ -295,14 +345,9 @@ namespace omc::server
 			// Content-type esperado: multipart/form-data
 			//   campo "media"  → archivo binario (obligatorio)
 			//   campo "title"  → nombre descriptivo (opcional; fallback al nombre de fichero)
-			//
-			// Correcciones aplicadas:
-			//   · El MIME type se infiere desde la extensión del fichero original
-			//     cuando el cliente reporta application/octet-stream o lo omite.
-			//   · Si se proporciona un "title" sin extensión, se le añade
-			//     automáticamente la extensión del fichero original para que el
-			//     servicio pueda determinar el formato correctamente.
 			server.Post("/api/media", [this](const httplib::Request& req, httplib::Response& res) {
+				setCorsHeaders(res);
+
 				if (!req.is_multipart_form_data()) {
 					setError(res, httplib::StatusCode::BadRequest_400, "Expected multipart/form-data");
 					return;
@@ -364,6 +409,7 @@ namespace omc::server
 			// Devuelve una fuente de media por su ID.
 			server.Get(R"(/api/media/(\d+))", [this](const httplib::Request& req, httplib::Response& res) {
 				try {
+					setCorsHeaders(res);
 					const int id = extractId(req);
 					auto      dto = mediaService.getMediaSourceById(id);
 
@@ -385,6 +431,7 @@ namespace omc::server
 			// Elimina una fuente de media por su ID.
 			server.Delete(R"(/api/media/(\d+))", [this](const httplib::Request& req, httplib::Response& res) {
 				try {
+					setCorsHeaders(res);
 					const int  id = extractId(req);
 					const bool deleted = mediaService.deleteMediaSourceById(id);
 
@@ -404,20 +451,15 @@ namespace omc::server
 
 			// ── GET /api/media/:id/show ────────────────────────────────────
 			// Muestra la fuente de media en el overlay.
-			// NOTA: el segmento "show" debe matchearse *antes* de la ruta genérica
-			//       /api/media/(\d+) para evitar ambigüedades. cpp-httplib respeta
-			//       el orden de registro, por lo que este handler debe registrarse
-			//       DESPUÉS del handler genérico de :id (más específico primero).
 			server.Get(R"(/api/media/(\d+)/show)", [this](const httplib::Request& req, httplib::Response& res) {
 				try {
+					setCorsHeaders(res);
 					const int  id = extractId(req);
-					// const bool shown = mediaService.showMediaSourceInOverlay(id);
-					const bool shown = false; // TODO: implementar esta función en MediaService
 
-					if (!shown) {
-						setError(res, httplib::StatusCode::NotFound_404, "Media source not found");
-						return;
-					}
+					eventBus.emit(omc::event::WindowOpenRequestedEvent{
+						omc::ui::window::WebViewWindow("http://localhost:8080/media/" + std::to_string(id), {200, 150}, {960, 640})
+					});
+
 					res.set_content("{\"status\":\"shown\"}", "application/json");
 				}
 				catch (const std::invalid_argument&) {

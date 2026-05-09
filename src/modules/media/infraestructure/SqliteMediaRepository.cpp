@@ -17,6 +17,7 @@ namespace omc::media
 		const char* sql = R"(
 			SELECT
 				id,
+				title,
 				filename,
 				filepath,
 				contentType
@@ -38,34 +39,33 @@ namespace omc::media
 
 			media.id = sqlite3_column_int(stmt, 0);
 
-			auto filename =
-				sqlite3_column_text(stmt, 1);
+			// col 1 → title
+			const auto title = sqlite3_column_text(stmt, 1);
+			if (title) {
+				media.title = reinterpret_cast<const char*>(title);
+			}
 
-			auto filepath =
-				sqlite3_column_text(stmt, 2);
-
-			auto contentType =
-				sqlite3_column_text(stmt, 3);
-
+			// col 2 → filename
+			const auto filename = sqlite3_column_text(stmt, 2);
 			if (filename) {
-				media.filename =
-					reinterpret_cast<const char*>(filename);
+				media.filename = reinterpret_cast<const char*>(filename);
 			}
 
+			// col 3 → filepath
+			const auto filepath = sqlite3_column_text(stmt, 3);
 			if (filepath) {
-				media.filepath =
-					reinterpret_cast<const char*>(filepath);
+				media.filepath = reinterpret_cast<const char*>(filepath);
 			}
 
+			// col 4 → contentType
+			const auto contentType = sqlite3_column_text(stmt, 4);
 			if (contentType) {
-				media.contentType =
-					reinterpret_cast<const char*>(contentType);
+				media.contentType = reinterpret_cast<const char*>(contentType);
 			}
 
 			// Obtener tamaño real del archivo
 			if (std::filesystem::exists(media.filepath)) {
-				media.size =
-					std::filesystem::file_size(media.filepath);
+				media.size = std::filesystem::file_size(media.filepath);
 			}
 		}
 
@@ -85,6 +85,7 @@ namespace omc::media
 		const char* sql = R"(
 			SELECT
 				id,
+				title,
 				filename,
 				filepath,
 				contentType
@@ -101,38 +102,36 @@ namespace omc::media
 
 			Media media;
 
-			media.id =
-				sqlite3_column_int(stmt, 0);
+			// col 0 → id
+			media.id = sqlite3_column_int(stmt, 0);
 
-			const unsigned char* filenameText =
-				sqlite3_column_text(stmt, 1);
+			// col 1 → title
+			const unsigned char* titleText = sqlite3_column_text(stmt, 1);
+			if (titleText) {
+				media.title = reinterpret_cast<const char*>(titleText);
+			}
 
-			const unsigned char* filepathText =
-				sqlite3_column_text(stmt, 2);
-
-			const unsigned char* contentTypeText =
-				sqlite3_column_text(stmt, 3);
-
+			// col 2 → filename
+			const unsigned char* filenameText = sqlite3_column_text(stmt, 2);
 			if (filenameText) {
-				media.filename =
-					reinterpret_cast<const char*>(filenameText);
+				media.filename = reinterpret_cast<const char*>(filenameText);
 			}
 
+			// col 3 → filepath
+			const unsigned char* filepathText = sqlite3_column_text(stmt, 3);
 			if (filepathText) {
-				media.filepath =
-					reinterpret_cast<const char*>(filepathText);
+				media.filepath = reinterpret_cast<const char*>(filepathText);
 			}
 
+			// col 4 → contentType
+			const unsigned char* contentTypeText = sqlite3_column_text(stmt, 4);
 			if (contentTypeText) {
-				media.contentType =
-					reinterpret_cast<const char*>(contentTypeText);
+				media.contentType = reinterpret_cast<const char*>(contentTypeText);
 			}
 
 			// Obtener tamaño real
 			if (std::filesystem::exists(media.filepath)) {
-
-				media.size =
-					std::filesystem::file_size(media.filepath);
+				media.size = std::filesystem::file_size(media.filepath);
 			}
 
 			result.push_back(std::move(media));
@@ -268,28 +267,29 @@ namespace omc::media
 
 		sqlite3_bind_int(stmt, 1, id);
 
-		bool success =
-			(sqlite3_step(stmt) == SQLITE_DONE);
-
+		const bool success = (sqlite3_step(stmt) == SQLITE_DONE);
+		const int changes = sqlite3_changes(db_);
 		sqlite3_finalize(stmt);
 
-		if (!success) {
+		if (!success || changes == 0) {
 			return false;
 		}
 
+		// La fila fue eliminada de la BD: borrar también el fichero en disco.
 		if (std::filesystem::exists(media.filepath)) {
 			std::filesystem::remove(media.filepath);
 		}
 
-		return sqlite3_changes(db_) > 0;
+		return true;
 	}
 
 	bool SqliteMediaRepository::setupDatabase(const std::string& dbPath, std::string& out)
 	{
 		int rc = sqlite3_open(dbPath.c_str(), &db_);
 		if (rc != SQLITE_OK) {
+			out = sqlite3_errmsg(db_); // leer el error con el handle aún válido
+			sqlite3_close(db_);        // cerrar el handle aunque la apertura falló
 			db_ = nullptr;
-			out = sqlite3_errmsg(db_);
 			return false;
 		}
 

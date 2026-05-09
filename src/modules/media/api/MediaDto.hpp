@@ -34,4 +34,17 @@ namespace omc::media
             .field("contentType", dto.contentType)
             .build();
     }
+
+    inline std::string to_json(const MediaFileDto& dto)
+    {
+        using omc::json::JsonSerializer;
+
+        return omc::json::JsonObject{}
+            .field("id", dto.id)
+            .field("filename", dto.filename)
+            .field("filepath", dto.filepath)
+            .field("contentType", dto.contentType)
+            .field("size", dto.size)
+            .build();
+    }
 }

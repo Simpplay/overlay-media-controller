@@ -32,19 +32,6 @@ namespace omc::ui
 		{
 			this->threadPool = threadPool;
 			renderer.init();
-
-			// Test window
-			int numTestWindows = 0;
-
-			for (int i = 0; i < numTestWindows; ++i) {
-				omc::ui::window::TestWindow testWindow;
-				eventBus.emit(omc::event::WindowOpenRequestedEvent(testWindow));
-			}
-
-			// Here create a webview window and navigate to a URL, e.g.: youtube.com, and test if it renders correctly and is interactive.
-			eventBus.emit(omc::event::WindowOpenRequestedEvent{
-				omc::ui::window::WebViewWindow("https://youtube.com", {200, 150}, {960, 640})
-			});
 		}
 
 		void render();
