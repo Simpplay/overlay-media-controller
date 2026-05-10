@@ -28,8 +28,9 @@ namespace omc::media
     {
         int id;
         std::string name;
-		std::vector<MediaSourceDto> mediaSources;
-	};
+
+        std::vector<MediaSourceDto> media;
+    };
 
     inline std::string to_json(const MediaSourceDto& dto)
     {
@@ -62,7 +63,7 @@ namespace omc::media
         return omc::json::JsonObject{}
             .field("id", dto.id)
             .field("name", dto.name)
-            .field("mediaSources", dto.mediaSources)
+            .field("media", dto.media)
             .build();
 	}
 }

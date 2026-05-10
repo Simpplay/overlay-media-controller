@@ -12,18 +12,19 @@ namespace omc::media
 	// Helpers
 	// ---------------------------------------------------------------------------
 
-	static std::vector<Category> fetchCategoriesForMedia(sqlite3* db, int mediaId)
+	static std::vector<CategoryPreview> fetchCategoriesForMedia(sqlite3* db, int mediaId)
 	{
-		std::vector<Category> cats;
+		std::vector<CategoryPreview> cats;
 
 		const char* sql = R"(
-			SELECT c.id, c.name
-			FROM categories c
-			INNER JOIN media_categories mc ON mc.category_id = c.id
-			WHERE mc.media_id = ?;
-		)";
+        SELECT c.id, c.name
+        FROM categories c
+        INNER JOIN media_categories mc ON mc.category_id = c.id
+        WHERE mc.media_id = ?;
+    )";
 
 		sqlite3_stmt* stmt = nullptr;
+
 		if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
 			return cats;
 		}
@@ -31,17 +32,76 @@ namespace omc::media
 		sqlite3_bind_int(stmt, 1, mediaId);
 
 		while (sqlite3_step(stmt) == SQLITE_ROW) {
-			Category cat;
+
+			CategoryPreview cat;
+
 			cat.id = sqlite3_column_int(stmt, 0);
+
 			const auto name = sqlite3_column_text(stmt, 1);
+
 			if (name) {
 				cat.name = reinterpret_cast<const char*>(name);
 			}
+
 			cats.push_back(std::move(cat));
 		}
 
 		sqlite3_finalize(stmt);
+
 		return cats;
+	}
+
+	static std::vector<MediaPreview> fetchMediaForCategory(sqlite3* db, int categoryId)
+	{
+		std::vector<MediaPreview> mediaList;
+
+		const char* sql = R"(
+        SELECT
+            m.id,
+            m.title,
+            m.filename,
+            m.contentType
+        FROM media m
+        INNER JOIN media_categories mc
+            ON mc.media_id = m.id
+        WHERE mc.category_id = ?;
+    )";
+
+		sqlite3_stmt* stmt = nullptr;
+
+		if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+			return mediaList;
+		}
+
+		sqlite3_bind_int(stmt, 1, categoryId);
+
+		while (sqlite3_step(stmt) == SQLITE_ROW) {
+
+			MediaPreview media;
+
+			media.id = sqlite3_column_int(stmt, 0);
+
+			const auto title = sqlite3_column_text(stmt, 1);
+			if (title) {
+				media.title = reinterpret_cast<const char*>(title);
+			}
+
+			const auto filename = sqlite3_column_text(stmt, 2);
+			if (filename) {
+				media.filename = reinterpret_cast<const char*>(filename);
+			}
+
+			const auto contentType = sqlite3_column_text(stmt, 3);
+			if (contentType) {
+				media.contentType = reinterpret_cast<const char*>(contentType);
+			}
+
+			mediaList.push_back(std::move(media));
+		}
+
+		sqlite3_finalize(stmt);
+
+		return mediaList;
 	}
 
 	// ---------------------------------------------------------------------------
@@ -405,8 +465,10 @@ namespace omc::media
 		}
 
 		const char* sql = R"(
-			SELECT id, name FROM categories WHERE id = ?;
-		)";
+        SELECT id, name
+        FROM categories
+        WHERE id = ?;
+    )";
 
 		sqlite3_stmt* stmt = nullptr;
 
@@ -416,17 +478,23 @@ namespace omc::media
 
 		sqlite3_bind_int(stmt, 1, id);
 
+		if (sqlite3_step(stmt) != SQLITE_ROW) {
+			sqlite3_finalize(stmt);
+			return std::nullopt;
+		}
+
 		Category cat;
 
-		if (sqlite3_step(stmt) == SQLITE_ROW) {
-			cat.id = sqlite3_column_int(stmt, 0);
-			const auto name = sqlite3_column_text(stmt, 1);
-			if (name) {
-				cat.name = reinterpret_cast<const char*>(name);
-			}
+		cat.id = sqlite3_column_int(stmt, 0);
+
+		const auto name = sqlite3_column_text(stmt, 1);
+		if (name) {
+			cat.name = reinterpret_cast<const char*>(name);
 		}
 
 		sqlite3_finalize(stmt);
+
+		cat.media = fetchMediaForCategory(db_, cat.id);
 
 		return cat;
 	}
@@ -487,15 +555,29 @@ namespace omc::media
 			return false;
 		}
 
-		// INSERT OR IGNORE prevents duplicates without raising an error.
+		if (getMediaById(mediaId).id == 0) {
+			return false;
+		}
+
+		auto category = getCategoryById(categoryId);
+		if (!category.has_value()) {
+			return false;
+		}
+
+		sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+
 		const char* sql = R"(
-			INSERT OR IGNORE INTO media_categories (media_id, category_id)
-			VALUES (?, ?);
-		)";
+        INSERT OR IGNORE INTO media_categories (
+            media_id,
+            category_id
+        )
+        VALUES (?, ?);
+    )";
 
 		sqlite3_stmt* stmt = nullptr;
 
 		if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+			sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
 			return false;
 		}
 
@@ -503,9 +585,17 @@ namespace omc::media
 		sqlite3_bind_int(stmt, 2, categoryId);
 
 		const bool success = (sqlite3_step(stmt) == SQLITE_DONE);
+
 		sqlite3_finalize(stmt);
 
-		return success;
+		if (!success) {
+			sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+			return false;
+		}
+
+		sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, nullptr);
+
+		return true;
 	}
 
 	bool SqliteMediaRepository::removeMediaFromCategory(int mediaId, int categoryId)
@@ -514,14 +604,18 @@ namespace omc::media
 			return false;
 		}
 
+		sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+
 		const char* sql = R"(
-			DELETE FROM media_categories
-			WHERE media_id = ? AND category_id = ?;
-		)";
+        DELETE FROM media_categories
+        WHERE media_id = ?
+          AND category_id = ?;
+    )";
 
 		sqlite3_stmt* stmt = nullptr;
 
 		if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+			sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
 			return false;
 		}
 
@@ -530,9 +624,17 @@ namespace omc::media
 
 		const bool success = (sqlite3_step(stmt) == SQLITE_DONE);
 		const int changes = sqlite3_changes(db_);
+
 		sqlite3_finalize(stmt);
 
-		return success && changes > 0;
+		if (!success || changes == 0) {
+			sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+			return false;
+		}
+
+		sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, nullptr);
+
+		return true;
 	}
 
 	// ---------------------------------------------------------------------------

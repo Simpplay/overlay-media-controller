@@ -4,10 +4,14 @@
 #include <string>
 #include <vector>
 
-#include "Category.hpp"
-
 namespace omc::media
 {
+    struct CategoryPreview
+    {
+        int id = 0;
+        std::string name;
+    };
+
     struct Media
     {
         int id = 0;
@@ -17,9 +21,8 @@ namespace omc::media
         std::string filepath;
         std::string contentType;
 
-		std::vector<Category> categories;
+        std::vector<CategoryPreview> categories;
 
-        // Opcional:
         uint64_t size = 0;
     };
 }

@@ -24,11 +24,23 @@ namespace omc::media
 			};
 		}
 
-		MediaCategoryDto categoryToDto(const Category& category) {
-			return MediaCategoryDto{
-				category.id,
-				category.name
-			};
+		MediaCategoryDto categoryToDto(const Category& category)
+		{
+			MediaCategoryDto dto;
+
+			dto.id = category.id;
+			dto.name = category.name;
+
+			for (const auto& media : category.media) {
+				dto.media.push_back(MediaSourceDto{
+					media.id,
+					media.title,
+					media.filename,
+					media.contentType
+					});
+			}
+
+			return dto;
 		}
 	};
 
