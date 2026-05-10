@@ -251,6 +251,21 @@ namespace omc::server
 
 	void MediaApiModule::handleGetMediaThumbnail(const httplib::Request& req, httplib::Response& res)
 	{
+		try {
+			const int id = extractId(req);
+			auto media = mediaService.getMediaSourceById(id);
+			if (!media) {
+				setError(res, httplib::StatusCode::NotFound_404, "Media source not found");
+				return;
+			}
 
+			res.set_content("{\"thumbnail_url\":\"/thumbnails/" + std::to_string(id) + ".png\"}", "application/json");
+		}
+		catch (const std::invalid_argument&) {
+			setError(res, httplib::StatusCode::BadRequest_400, "Invalid ID format");
+		}
+		catch (const std::exception& e) {
+			setError(res, httplib::StatusCode::InternalServerError_500, e.what());
+		}
 	}
 }
