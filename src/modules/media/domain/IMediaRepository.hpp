@@ -4,6 +4,7 @@
 #include <string>
 
 #include "Media.hpp"
+#include "Category.hpp"
 
 namespace omc::media
 {
@@ -17,5 +18,15 @@ namespace omc::media
 
 		virtual Media addMedia(const std::vector<std::byte>& data, const std::string& filename, const std::string& contentType) = 0;
 		virtual bool deleteMediaById(int id) = 0;
+
+
+		// Category management
+		virtual std::vector<Category> getAllCategories() = 0;
+		virtual std::optional<Category> getCategoryById(int id) = 0;
+		virtual bool createCategory(const std::string& name) = 0;
+		virtual bool deleteCategoryById(int id) = 0;
+		virtual bool addMediaToCategory(int mediaId, int categoryId) = 0;
+		virtual bool removeMediaFromCategory(int mediaId, int categoryId) = 0;
+		virtual std::vector<Media> getMediaByCategoryId(int categoryId) = 0;
 	};
 }

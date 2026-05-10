@@ -8,6 +8,46 @@
 
 namespace omc::media
 {
+	// ---------------------------------------------------------------------------
+	// Helpers
+	// ---------------------------------------------------------------------------
+
+	static std::vector<Category> fetchCategoriesForMedia(sqlite3* db, int mediaId)
+	{
+		std::vector<Category> cats;
+
+		const char* sql = R"(
+			SELECT c.id, c.name
+			FROM categories c
+			INNER JOIN media_categories mc ON mc.category_id = c.id
+			WHERE mc.media_id = ?;
+		)";
+
+		sqlite3_stmt* stmt = nullptr;
+		if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+			return cats;
+		}
+
+		sqlite3_bind_int(stmt, 1, mediaId);
+
+		while (sqlite3_step(stmt) == SQLITE_ROW) {
+			Category cat;
+			cat.id = sqlite3_column_int(stmt, 0);
+			const auto name = sqlite3_column_text(stmt, 1);
+			if (name) {
+				cat.name = reinterpret_cast<const char*>(name);
+			}
+			cats.push_back(std::move(cat));
+		}
+
+		sqlite3_finalize(stmt);
+		return cats;
+	}
+
+	// ---------------------------------------------------------------------------
+	// Media
+	// ---------------------------------------------------------------------------
+
 	Media SqliteMediaRepository::getMediaById(int id)
 	{
 		if (!db_) {
@@ -39,34 +79,31 @@ namespace omc::media
 
 			media.id = sqlite3_column_int(stmt, 0);
 
-			// col 1 → title
 			const auto title = sqlite3_column_text(stmt, 1);
 			if (title) {
 				media.title = reinterpret_cast<const char*>(title);
 			}
 
-			// col 2 → filename
 			const auto filename = sqlite3_column_text(stmt, 2);
 			if (filename) {
 				media.filename = reinterpret_cast<const char*>(filename);
 			}
 
-			// col 3 → filepath
 			const auto filepath = sqlite3_column_text(stmt, 3);
 			if (filepath) {
 				media.filepath = reinterpret_cast<const char*>(filepath);
 			}
 
-			// col 4 → contentType
 			const auto contentType = sqlite3_column_text(stmt, 4);
 			if (contentType) {
 				media.contentType = reinterpret_cast<const char*>(contentType);
 			}
 
-			// Obtener tamaño real del archivo
 			if (std::filesystem::exists(media.filepath)) {
 				media.size = std::filesystem::file_size(media.filepath);
 			}
+
+			media.categories = fetchCategoriesForMedia(db_, media.id);
 		}
 
 		sqlite3_finalize(stmt);
@@ -102,37 +139,33 @@ namespace omc::media
 
 			Media media;
 
-			// col 0 → id
 			media.id = sqlite3_column_int(stmt, 0);
 
-			// col 1 → title
 			const unsigned char* titleText = sqlite3_column_text(stmt, 1);
 			if (titleText) {
 				media.title = reinterpret_cast<const char*>(titleText);
 			}
 
-			// col 2 → filename
 			const unsigned char* filenameText = sqlite3_column_text(stmt, 2);
 			if (filenameText) {
 				media.filename = reinterpret_cast<const char*>(filenameText);
 			}
 
-			// col 3 → filepath
 			const unsigned char* filepathText = sqlite3_column_text(stmt, 3);
 			if (filepathText) {
 				media.filepath = reinterpret_cast<const char*>(filepathText);
 			}
 
-			// col 4 → contentType
 			const unsigned char* contentTypeText = sqlite3_column_text(stmt, 4);
 			if (contentTypeText) {
 				media.contentType = reinterpret_cast<const char*>(contentTypeText);
 			}
 
-			// Obtener tamaño real
 			if (std::filesystem::exists(media.filepath)) {
 				media.size = std::filesystem::file_size(media.filepath);
 			}
+
+			media.categories = fetchCategoriesForMedia(db_, media.id);
 
 			result.push_back(std::move(media));
 		}
@@ -151,7 +184,6 @@ namespace omc::media
 			return Media();
 		}
 
-		// Generar nombre único
 		auto timestamp =
 			std::chrono::duration_cast<std::chrono::milliseconds>(
 				std::chrono::system_clock::now().time_since_epoch())
@@ -164,7 +196,6 @@ namespace omc::media
 
 		std::cout << "Storing media file: " << fullPath << "\n";
 
-		// Guardar archivo
 		{
 			std::ofstream file(fullPath, std::ios::binary);
 
@@ -200,26 +231,9 @@ namespace omc::media
 			return Media();
 		}
 
-		sqlite3_bind_text(
-			stmt,
-			1,
-			filename.c_str(),
-			-1,
-			SQLITE_TRANSIENT);
-
-		sqlite3_bind_text(
-			stmt,
-			2,
-			fullPath.string().c_str(),
-			-1,
-			SQLITE_TRANSIENT);
-
-		sqlite3_bind_text(
-			stmt,
-			3,
-			contentType.c_str(),
-			-1,
-			SQLITE_TRANSIENT);
+		sqlite3_bind_text(stmt, 1, filename.c_str(), -1, SQLITE_TRANSIENT);
+		sqlite3_bind_text(stmt, 2, fullPath.string().c_str(), -1, SQLITE_TRANSIENT);
+		sqlite3_bind_text(stmt, 3, contentType.c_str(), -1, SQLITE_TRANSIENT);
 
 		if (sqlite3_step(stmt) != SQLITE_DONE) {
 			sqlite3_finalize(stmt);
@@ -230,10 +244,7 @@ namespace omc::media
 		sqlite3_finalize(stmt);
 
 		Media media;
-
-		media.id = static_cast<int>(
-			sqlite3_last_insert_rowid(db_));
-
+		media.id = static_cast<int>(sqlite3_last_insert_rowid(db_));
 		media.filename = filename;
 		media.filepath = fullPath.string();
 		media.contentType = contentType;
@@ -275,7 +286,6 @@ namespace omc::media
 			return false;
 		}
 
-		// La fila fue eliminada de la BD: borrar también el fichero en disco.
 		if (std::filesystem::exists(media.filepath)) {
 			std::filesystem::remove(media.filepath);
 		}
@@ -283,12 +293,258 @@ namespace omc::media
 		return true;
 	}
 
+	std::vector<Media> SqliteMediaRepository::getMediaByCategoryId(int categoryId)
+	{
+		std::vector<Media> result;
+
+		if (!db_) {
+			return result;
+		}
+
+		const char* sql = R"(
+			SELECT
+				m.id,
+				m.title,
+				m.filename,
+				m.filepath,
+				m.contentType
+			FROM media m
+			INNER JOIN media_categories mc ON mc.media_id = m.id
+			WHERE mc.category_id = ?;
+		)";
+
+		sqlite3_stmt* stmt = nullptr;
+
+		if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+			return result;
+		}
+
+		sqlite3_bind_int(stmt, 1, categoryId);
+
+		while (sqlite3_step(stmt) == SQLITE_ROW) {
+
+			Media media;
+
+			media.id = sqlite3_column_int(stmt, 0);
+
+			const unsigned char* titleText = sqlite3_column_text(stmt, 1);
+			if (titleText) {
+				media.title = reinterpret_cast<const char*>(titleText);
+			}
+
+			const unsigned char* filenameText = sqlite3_column_text(stmt, 2);
+			if (filenameText) {
+				media.filename = reinterpret_cast<const char*>(filenameText);
+			}
+
+			const unsigned char* filepathText = sqlite3_column_text(stmt, 3);
+			if (filepathText) {
+				media.filepath = reinterpret_cast<const char*>(filepathText);
+			}
+
+			const unsigned char* contentTypeText = sqlite3_column_text(stmt, 4);
+			if (contentTypeText) {
+				media.contentType = reinterpret_cast<const char*>(contentTypeText);
+			}
+
+			if (std::filesystem::exists(media.filepath)) {
+				media.size = std::filesystem::file_size(media.filepath);
+			}
+
+			media.categories = fetchCategoriesForMedia(db_, media.id);
+
+			result.push_back(std::move(media));
+		}
+
+		sqlite3_finalize(stmt);
+
+		return result;
+	}
+
+	// ---------------------------------------------------------------------------
+	// Categories
+	// ---------------------------------------------------------------------------
+
+	std::vector<Category> SqliteMediaRepository::getAllCategories()
+	{
+		std::vector<Category> result;
+
+		if (!db_) {
+			return result;
+		}
+
+		const char* sql = R"(
+			SELECT id, name FROM categories;
+		)";
+
+		sqlite3_stmt* stmt = nullptr;
+
+		if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+			return result;
+		}
+
+		while (sqlite3_step(stmt) == SQLITE_ROW) {
+			Category cat;
+			cat.id = sqlite3_column_int(stmt, 0);
+			const auto name = sqlite3_column_text(stmt, 1);
+			if (name) {
+				cat.name = reinterpret_cast<const char*>(name);
+			}
+			result.push_back(std::move(cat));
+		}
+
+		sqlite3_finalize(stmt);
+
+		return result;
+	}
+
+	std::optional<Category> SqliteMediaRepository::getCategoryById(int id)
+	{
+		if (!db_) {
+			return std::nullopt;
+		}
+
+		const char* sql = R"(
+			SELECT id, name FROM categories WHERE id = ?;
+		)";
+
+		sqlite3_stmt* stmt = nullptr;
+
+		if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+			return std::nullopt;
+		}
+
+		sqlite3_bind_int(stmt, 1, id);
+
+		Category cat;
+
+		if (sqlite3_step(stmt) == SQLITE_ROW) {
+			cat.id = sqlite3_column_int(stmt, 0);
+			const auto name = sqlite3_column_text(stmt, 1);
+			if (name) {
+				cat.name = reinterpret_cast<const char*>(name);
+			}
+		}
+
+		sqlite3_finalize(stmt);
+
+		return cat;
+	}
+
+	bool SqliteMediaRepository::createCategory(const std::string& name)
+	{
+		if (!db_) {
+			return false;
+		}
+
+		const char* sql = R"(
+			INSERT INTO categories (name) VALUES (?);
+		)";
+
+		sqlite3_stmt* stmt = nullptr;
+
+		if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+			return false;
+		}
+
+		sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
+
+		const bool success = (sqlite3_step(stmt) == SQLITE_DONE);
+		sqlite3_finalize(stmt);
+
+		return success;
+	}
+
+	bool SqliteMediaRepository::deleteCategoryById(int id)
+	{
+		if (!db_) {
+			return false;
+		}
+
+		// ON DELETE CASCADE removes rows from media_categories automatically.
+		const char* sql = R"(
+			DELETE FROM categories WHERE id = ?;
+		)";
+
+		sqlite3_stmt* stmt = nullptr;
+
+		if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+			return false;
+		}
+
+		sqlite3_bind_int(stmt, 1, id);
+
+		const bool success = (sqlite3_step(stmt) == SQLITE_DONE);
+		const int changes = sqlite3_changes(db_);
+		sqlite3_finalize(stmt);
+
+		return success && changes > 0;
+	}
+
+	bool SqliteMediaRepository::addMediaToCategory(int mediaId, int categoryId)
+	{
+		if (!db_) {
+			return false;
+		}
+
+		// INSERT OR IGNORE prevents duplicates without raising an error.
+		const char* sql = R"(
+			INSERT OR IGNORE INTO media_categories (media_id, category_id)
+			VALUES (?, ?);
+		)";
+
+		sqlite3_stmt* stmt = nullptr;
+
+		if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+			return false;
+		}
+
+		sqlite3_bind_int(stmt, 1, mediaId);
+		sqlite3_bind_int(stmt, 2, categoryId);
+
+		const bool success = (sqlite3_step(stmt) == SQLITE_DONE);
+		sqlite3_finalize(stmt);
+
+		return success;
+	}
+
+	bool SqliteMediaRepository::removeMediaFromCategory(int mediaId, int categoryId)
+	{
+		if (!db_) {
+			return false;
+		}
+
+		const char* sql = R"(
+			DELETE FROM media_categories
+			WHERE media_id = ? AND category_id = ?;
+		)";
+
+		sqlite3_stmt* stmt = nullptr;
+
+		if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+			return false;
+		}
+
+		sqlite3_bind_int(stmt, 1, mediaId);
+		sqlite3_bind_int(stmt, 2, categoryId);
+
+		const bool success = (sqlite3_step(stmt) == SQLITE_DONE);
+		const int changes = sqlite3_changes(db_);
+		sqlite3_finalize(stmt);
+
+		return success && changes > 0;
+	}
+
+	// ---------------------------------------------------------------------------
+	// Database lifecycle
+	// ---------------------------------------------------------------------------
+
 	bool SqliteMediaRepository::setupDatabase(const std::string& dbPath, std::string& out)
 	{
 		int rc = sqlite3_open(dbPath.c_str(), &db_);
 		if (rc != SQLITE_OK) {
-			out = sqlite3_errmsg(db_); // leer el error con el handle aún válido
-			sqlite3_close(db_);        // cerrar el handle aunque la apertura falló
+			out = sqlite3_errmsg(db_);
+			sqlite3_close(db_);
 			db_ = nullptr;
 			return false;
 		}
@@ -312,19 +568,36 @@ namespace omc::media
 
 	bool SqliteMediaRepository::initializeDatabase(std::string& out)
 	{
-		const char* createTableSql = R"(
+		// Enable foreign-key enforcement for this connection.
+		if (sqlite3_exec(db_, "PRAGMA foreign_keys = ON;", nullptr, nullptr, nullptr) != SQLITE_OK) {
+			out = "Failed to enable foreign keys";
+			return false;
+		}
+
+		const char* ddl = R"(
 			CREATE TABLE IF NOT EXISTS media (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				title TEXT,
-				filename TEXT,
-				filepath TEXT NOT NULL,
+				id          INTEGER PRIMARY KEY AUTOINCREMENT,
+				title       TEXT,
+				filename    TEXT,
+				filepath    TEXT NOT NULL,
 				contentType TEXT
+			);
+
+			CREATE TABLE IF NOT EXISTS categories (
+				id   INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL UNIQUE
+			);
+
+			CREATE TABLE IF NOT EXISTS media_categories (
+				media_id    INTEGER NOT NULL REFERENCES media(id)      ON DELETE CASCADE,
+				category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+				PRIMARY KEY (media_id, category_id)
 			);
 		)";
 
 		char* errmsg = nullptr;
-		if (sqlite3_exec(db_, createTableSql, nullptr, nullptr, &errmsg) != SQLITE_OK) {
-			out = "Failed to create media table: ";
+		if (sqlite3_exec(db_, ddl, nullptr, nullptr, &errmsg) != SQLITE_OK) {
+			out = "Failed to initialise database schema: ";
 			out += errmsg;
 			sqlite3_free(errmsg);
 			return false;

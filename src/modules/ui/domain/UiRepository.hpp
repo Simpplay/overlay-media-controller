@@ -2,8 +2,10 @@
 
 #include <vector>
 #include <map>
+#include <algorithm>
 
 #include "modules/ui/domain/UiWindow.hpp"
+
 
 namespace omc::ui 
 {
@@ -40,9 +42,9 @@ namespace omc::ui
 				highestZWindow->updateWindowInteraction();
 			}
 
-			windows.erase(std::remove_if(windows.begin(), windows.end(), [](const auto& pair) {
+			std::erase_if(windows, [](const auto& pair) {
 				return pair.second->closed();
-				}), windows.end());
+			});
 		}
 
 		void renderWindows(std::vector<DrawCommand>& out) {

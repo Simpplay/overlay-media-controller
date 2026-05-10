@@ -39,7 +39,7 @@ namespace omc::ui
 	};
 
 	UiService::UiService(omc::event::EventBus& eventBus, std::shared_ptr<UiRepository> uiRepository)
-		: eventBus(eventBus), uiRepository(uiRepository)
+		: impl_(std::make_unique<Impl>()), eventBus(eventBus), uiRepository(uiRepository)
 	{
 	}
 

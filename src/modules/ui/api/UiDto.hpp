@@ -28,20 +28,6 @@ namespace omc::ui
 		SizeDto size;
     };
 
-    inline std::string to_json(const OverlayDto& dto)
-    {
-        using omc::json::JsonSerializer;
-
-        return omc::json::JsonObject{}
-            .field("id", dto.id)
-            .field("media_id", dto.media_id)
-            .field("state", dto.state)
-            .field("fullscreen", dto.fullscreen)
-            .field("position", to_json(dto.position))
-            .field("size", to_json(dto.size))
-            .build();
-    }
-
     inline std::string to_json(const PositionDto& dto)
     {
         using omc::json::JsonSerializer;
@@ -59,4 +45,18 @@ namespace omc::ui
             .field("height", dto.height)
             .build();
 	}
+
+    inline std::string to_json(const OverlayDto& dto)
+    {
+        using omc::json::JsonSerializer;
+
+        return omc::json::JsonObject{}
+            .field("id", dto.id)
+            .field("media_id", dto.media_id)
+            .field("state", dto.state)
+            .field("fullscreen", dto.fullscreen)
+            .field("position", to_json(dto.position))
+            .field("size", to_json(dto.size))
+            .build();
+    }
 }

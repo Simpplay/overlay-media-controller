@@ -12,6 +12,7 @@ namespace omc::media
 		std::string title;
 		std::string filename;
 		std::string contentType;
+		std::vector<int> categoryIds;
 	};
 
 	struct MediaFileDto
@@ -21,6 +22,13 @@ namespace omc::media
 		std::string filepath;
 		std::string contentType;
 		uint64_t size;
+	};
+
+    struct MediaCategoryDto
+    {
+        int id;
+        std::string name;
+		std::vector<MediaSourceDto> mediaSources;
 	};
 
     inline std::string to_json(const MediaSourceDto& dto)
@@ -47,4 +55,14 @@ namespace omc::media
             .field("size", dto.size)
             .build();
     }
+
+    inline std::string to_json(const MediaCategoryDto& dto)
+    {
+        using omc::json::JsonSerializer;
+        return omc::json::JsonObject{}
+            .field("id", dto.id)
+            .field("name", dto.name)
+            .field("mediaSources", dto.mediaSources)
+            .build();
+	}
 }

@@ -27,6 +27,15 @@ namespace omc::media
 
 		bool deleteMediaSourceById(int id) override;
 
+		// Category management
+		std::vector<MediaCategoryDto> getAllCategories() override;
+		bool createCategory(const std::string& name) override;
+		std::optional<MediaCategoryDto> getCategoryById(int id) override;
+		bool deleteCategoryById(int id) override;
+
+		bool addMediaToCategory(int mediaId, int categoryId) override;
+		bool removeMediaFromCategory(int mediaId, int categoryId) override;
+		std::vector<MediaSourceDto> getMediaByCategoryId(int categoryId) override;
 	private:
 		struct Impl;
 		std::unique_ptr<Impl> impl_;
