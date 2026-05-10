@@ -5,6 +5,8 @@
 #include "core/event/api/EventBus.hpp"
 
 #include "modules/ui/runtime/UiManager.hpp"
+#include "modules/ui/domain/UiRepository.hpp"
+#include "modules/ui/application/UiService.hpp"
 
 #include "modules/media/runtime/MediaManager.hpp"
 #include "modules/media/infrastructure/SqliteMediaRepository.hpp"
@@ -25,11 +27,13 @@ namespace omc::application
 
 		omc::event::EventBus eventBus;
 
-		omc::ui::UiManager uiManager{ eventBus };
+		std::shared_ptr<omc::ui::UiRepository> uiRepository = std::make_shared<omc::ui::UiRepository>();
+		std::unique_ptr<omc::ui::UiService> uiService = std::make_unique<omc::ui::UiService>(eventBus, uiRepository);
+		omc::ui::UiManager uiManager{ eventBus, uiRepository };
 
 		std::unique_ptr<omc::media::MediaManager> mediaManager = std::make_unique<omc::media::MediaManager>();
 		std::shared_ptr<omc::media::SqliteMediaRepository> mediaRepository = std::make_shared<omc::media::SqliteMediaRepository>("./media-storage");
-		omc::media::MediaService mediaService{ mediaRepository };
+		std::shared_ptr<omc::media::MediaService> mediaService = std::make_shared<omc::media::MediaService>(mediaRepository);
 
 		std::unique_ptr<omc::server::ApiServer> apiServer;
 

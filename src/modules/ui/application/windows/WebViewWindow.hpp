@@ -48,7 +48,7 @@ namespace omc::ui::window
 
         // ---- Accessors -----------------------------------------
 
-        int         getId()  const noexcept { return m_id; }
+        int         getMediaId()  const noexcept { return m_id; }
         const std::string& getUrl() const noexcept { return m_url; }
 
         void navigate(std::string url) { m_url = std::move(url); }

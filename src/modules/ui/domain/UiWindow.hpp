@@ -79,6 +79,7 @@ namespace omc::ui::window
 		bool closed() const { return isClosed; }
 		void setZBase(int z) { zBase = z; }
 		int getZBase() const { return zBase; }
+		bool isMaximized{ false };
 
 		Vec2 position;
 		Vec2 size;
@@ -86,7 +87,6 @@ namespace omc::ui::window
 
 	protected:
 		bool isClosed{ false };
-		bool isMaximized{ false };
 		bool isDragging{ false };
 		bool isResizing{ false };
 		bool mouseWasDown{ false };

@@ -3,12 +3,14 @@ add_library(ui
     "api/IUiService.hpp"
     "api/events/WindowOpenRequestedEvent.hpp"
 
+    "application/UiService.hpp"
     "application/UiService.cpp"
     "application/windows/TestWindow.hpp"
     "application/windows/WebViewWindow.hpp"
 
     "domain/RenderTypes.hpp"
     "domain/UiWindow.hpp"
+    "domain/UiRepository.hpp"
 
     "infrastructure/HitTest.hpp"
     "infrastructure/WebViewRenderer.hpp"
@@ -27,7 +29,7 @@ target_include_directories(ui
     PRIVATE 
         ${CMAKE_CURRENT_SOURCE_DIR}/domain
         ${CMAKE_CURRENT_SOURCE_DIR}/application
-        ${CMAKE_CURRENT_SOURCE_DIR}/infraestructure
+        ${CMAKE_CURRENT_SOURCE_DIR}/infrastructure
         ${CMAKE_CURRENT_SOURCE_DIR}/runtime
 )
 

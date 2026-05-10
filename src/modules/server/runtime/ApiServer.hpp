@@ -5,6 +5,7 @@
 
 #include "core/event/api/EventBus.hpp"
 #include "modules/media/api/IMediaService.hpp"
+#include "modules/ui/api/IUiService.hpp"
 
 namespace omc::server
 {
@@ -63,7 +64,8 @@ namespace omc::server
 		/// @throws std::logic_error si el servidor ya está en marcha.
 		void start(int port,
 			omc::event::EventBus& eventBus,
-			omc::media::IMediaService& mediaService);
+			omc::media::IMediaService& mediaService,
+			omc::ui::IUiService& uiService);
 
 		/// Detiene el servidor y libera todos los recursos internos.
 		/// Es seguro llamarlo aunque start() no haya sido invocado.

@@ -7,7 +7,6 @@
 
 namespace omc::media
 {
-	struct MediaSource;
 	class IMediaService
 	{
 	public:

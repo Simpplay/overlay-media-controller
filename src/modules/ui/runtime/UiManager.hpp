@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 
+#include "modules/ui/domain/UiRepository.hpp"
+
 #include "core/event/api/EventBus.hpp"
 
 #include "modules/ui/api/events/WindowOpenRequestedEvent.hpp"
@@ -19,7 +21,7 @@ namespace omc::ui
 	class UiManager
 	{
 	public:
-		UiManager(omc::event::EventBus& eventBus) : eventBus(eventBus), renderer(eventBus)
+		UiManager(omc::event::EventBus& eventBus, std::shared_ptr<UiRepository> uiRepository) : eventBus(eventBus), uiRepository(uiRepository), renderer(eventBus)
 		{
 			eventBus.subscribe<omc::event::WindowOpenRequestedEvent>([this](const omc::event::WindowOpenRequestedEvent& event) {
 				handleWindowOpenRequestedEvent(event);
@@ -39,7 +41,7 @@ namespace omc::ui
 
 	private:
 		void handleWindowOpenRequestedEvent(const omc::event::WindowOpenRequestedEvent& event);
-		std::vector<std::unique_ptr<omc::ui::window::UiWindow>> windows;
+		std::shared_ptr<UiRepository> uiRepository;
 
 		omc::shared::ThreadPool* threadPool{ nullptr };
 
