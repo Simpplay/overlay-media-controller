@@ -29,4 +29,5 @@ target_link_libraries(server
     PUBLIC 
         core 
         httplib::httplib
+        nlohmann_json::nlohmann_json
 )
