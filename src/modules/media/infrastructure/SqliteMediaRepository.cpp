@@ -3,6 +3,7 @@
 #include <fstream>
 #include <filesystem>
 #include <chrono>
+#include <vector>
 
 #include <iostream>
 
@@ -124,13 +125,17 @@ namespace omc::media
 		int size)
 	{
 		IShellItemImageFactory* imageFactory = nullptr;
-
+		const HRESULT comInit = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+		const bool comInitialized = SUCCEEDED(comInit) || comInit == RPC_E_CHANGED_MODE;
 		HRESULT hr = SHCreateItemFromParsingName(
 			inputPath.wstring().c_str(),
 			nullptr,
 			IID_PPV_ARGS(&imageFactory));
 
 		if (FAILED(hr) || !imageFactory) {
+			if (comInitialized) {
+				CoUninitialize();
+			}
 			return false;
 		}
 
@@ -148,6 +153,9 @@ namespace omc::media
 		imageFactory->Release();
 
 		if (FAILED(hr) || !hBitmap) {
+			if (comInitialized) {
+				CoUninitialize();
+			}
 			return false;
 		}
 
@@ -161,6 +169,9 @@ namespace omc::media
 
 		if (FAILED(hr)) {
 			DeleteObject(hBitmap);
+			if (comInitialized) {
+				CoUninitialize();
+			}
 			return false;
 		}
 
@@ -176,6 +187,9 @@ namespace omc::media
 
 		if (FAILED(hr)) {
 			wicFactory->Release();
+			if (comInitialized) {
+				CoUninitialize();
+			}
 			return false;
 		}
 
@@ -197,6 +211,9 @@ namespace omc::media
 			stream->Release();
 			wicBitmap->Release();
 			wicFactory->Release();
+			if (comInitialized) {
+				CoUninitialize();
+			}
 			return false;
 		}
 
@@ -223,6 +240,9 @@ namespace omc::media
 			stream->Release();
 			wicBitmap->Release();
 			wicFactory->Release();
+			if (comInitialized) {
+				CoUninitialize();
+			}
 			return false;
 		}
 
@@ -236,6 +256,9 @@ namespace omc::media
 			stream->Release();
 			wicBitmap->Release();
 			wicFactory->Release();
+			if (comInitialized) {
+				CoUninitialize();
+			}
 			return false;
 		}
 
@@ -248,6 +271,9 @@ namespace omc::media
 			stream->Release();
 			wicBitmap->Release();
 			wicFactory->Release();
+			if (comInitialized) {
+				CoUninitialize();
+			}
 			return false;
 		}
 
@@ -276,6 +302,9 @@ namespace omc::media
 		stream->Release();
 		wicBitmap->Release();
 		wicFactory->Release();
+		if (comInitialized) {
+			CoUninitialize();
+		}
 
 		return SUCCEEDED(hr);
 	}
@@ -468,10 +497,12 @@ namespace omc::media
 		auto& thumbnailFilename =
 			thumbnailPath.replace_extension(".png");
 
-		if (!generateThumbnail(fullPath, thumbnailFilename)) {
-			std::cout << "Failed to generate thumbnail for: "
-				<< fullPath << "\n";
-		}
+		thumbnailThreadPool_->enqueue([this, fullPath, thumbnailFilename]() {
+			if (!generateThumbnail(fullPath, thumbnailFilename)) {
+				std::cout << "Failed to generate thumbnail for: "
+					<< fullPath << "\n";
+			}
+			});
 
 		const char* sql = R"(
 			INSERT INTO media (
@@ -869,6 +900,7 @@ namespace omc::media
 		}
 
 		dbPath_ = dbPath;
+		ensureThumbnailsForStoredMedia();
 		return true;
 	}
 
@@ -921,8 +953,49 @@ namespace omc::media
 		return true;
 	}
 
+	void SqliteMediaRepository::ensureThumbnailsForStoredMedia()
+	{
+		if (!db_) {
+			return;
+		}
+
+		const auto mediaList = getAllMedia();
+
+		for (const auto& media : mediaList) {
+			if (media.filepath.empty() || !std::filesystem::exists(media.filepath)) {
+				continue;
+			}
+
+			std::filesystem::path thumbnailPath = media.thumbnailPath.empty()
+				? (thumbnailRoot_ / std::filesystem::path(media.filepath).filename()).replace_extension(".png")
+				: std::filesystem::path(media.thumbnailPath);
+
+			if (std::filesystem::exists(thumbnailPath)) {
+				continue;
+			}
+
+			if (!generateThumbnail(media.filepath, thumbnailPath)) {
+				std::cout << "Failed to generate missing thumbnail for: " << media.filepath << "\n";
+				continue;
+			}
+
+			if (media.thumbnailPath.empty()) {
+				const char* sql = "UPDATE media SET thumbnailPath = ? WHERE id = ?;";
+				sqlite3_stmt* stmt = nullptr;
+				if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+					sqlite3_bind_text(stmt, 1, thumbnailPath.string().c_str(), -1, SQLITE_TRANSIENT);
+					sqlite3_bind_int(stmt, 2, media.id);
+					sqlite3_step(stmt);
+				}
+				sqlite3_finalize(stmt);
+			}
+		}
+	}
+
 	SqliteMediaRepository::SqliteMediaRepository(const std::filesystem::path& mediaRoot, const std::filesystem::path& thumbnailRoot)
-		: mediaRoot_(std::filesystem::absolute(mediaRoot)), thumbnailRoot_(std::filesystem::absolute(thumbnailRoot))
+		: mediaRoot_(std::filesystem::absolute(mediaRoot)),
+		thumbnailRoot_(std::filesystem::absolute(thumbnailRoot)),
+		thumbnailThreadPool_(std::make_unique<omc::shared::ThreadPool>(1))
 	{
 		std::filesystem::create_directories(mediaRoot_);
 		std::filesystem::create_directories(thumbnailRoot_);
@@ -930,6 +1003,7 @@ namespace omc::media
 
 	SqliteMediaRepository::~SqliteMediaRepository()
 	{
+		thumbnailThreadPool_.reset();
 		closeDatabase();
 	}
 }
