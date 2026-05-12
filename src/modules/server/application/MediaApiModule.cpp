@@ -126,7 +126,6 @@ namespace omc::server
 
 			// ── Abrir el fichero UNA vez ───────────────────────────
 			const std::string filePath = media->filepath;
-			std::cout << "MediaPath: " << filePath << std::endl;
 			auto streamPtr = std::make_shared<std::ifstream>(
 				filePath, std::ios::binary | std::ios::ate);
 

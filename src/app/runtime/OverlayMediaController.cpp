@@ -19,12 +19,6 @@ namespace omc::application
 
 		omc::shared::ThreadPool threadPool(std::thread::hardware_concurrency());
 
-		HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-
-		if (FAILED(hr)) {
-			return;
-		}
-
 		eventBus.subscribe<omc::event::ExitApplicationRequestedEvent>([this](const omc::event::ExitApplicationRequestedEvent& event) {
 			close();
 		});
