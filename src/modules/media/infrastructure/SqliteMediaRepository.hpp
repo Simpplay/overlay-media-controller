@@ -2,8 +2,10 @@
 
 #include <sqlite3.h>
 #include <filesystem>
+#include <memory>
 
 #include "modules/media/domain/IMediaRepository.hpp"
+#include "core/threading/api/ThreadPool.hpp"
 
 namespace omc::media
 {
@@ -33,10 +35,12 @@ namespace omc::media
 
 		// Helpers
 		bool generateThumbnail(const std::filesystem::path& inputPath, const std::filesystem::path& outputPath, int size = 256);
+		void ensureThumbnailsForStoredMedia();
 
 	private:
 		sqlite3* db_ = nullptr;
 		std::string dbPath_;
+		std::unique_ptr<omc::shared::ThreadPool> thumbnailThreadPool_;
 
 		std::filesystem::path mediaRoot_;
 		std::filesystem::path thumbnailRoot_;
