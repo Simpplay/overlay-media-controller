@@ -8,7 +8,7 @@ import type { Overlay } from '@/types'
 import { LayoutGrid } from 'lucide-react'
 
 export function StreamDeckPage() {
-  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [activeCategory, setActiveCategory] = useState<number | null>(null)
   const [pendingIds, setPendingIds] = useState<Set<number>>(new Set())
 
   const { data: media = [], isLoading: mediaLoading } = useMediaList()
@@ -21,7 +21,7 @@ export function StreamDeckPage() {
 
   const filteredMedia = useMemo(() => {
     if (!activeCategory) return media
-    return media.filter(m => m.categories?.includes(activeCategory))
+    return media.filter((m) => m.categories?.includes(activeCategory))
   }, [media, activeCategory])
 
   const overlayByMediaId = useMemo(() => {
@@ -90,7 +90,7 @@ export function StreamDeckPage() {
         ) : filteredMedia.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-zinc-600">
             <LayoutGrid className="w-10 h-10 mb-3 opacity-30" />
-            <p className="text-sm">No media{activeCategory ? ` in "${activeCategory}"` : ''}</p>
+            <p className="text-sm">No media{activeCategory ? ' in selected category' : ''}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">

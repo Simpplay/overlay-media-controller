@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { categoryService } from '@/services/category.service'
 import type { CreateCategoryPayload } from '@/types'
+import { MEDIA_KEYS } from '@/hooks/useMedia'
 import toast from 'react-hot-toast'
 
 export const CATEGORY_KEYS = {
@@ -52,6 +53,7 @@ export function useAddMediaToCategory() {
       categoryService.addMedia(categoryId, mediaId),
     onSuccess: (_data, { categoryId }) => {
       qc.invalidateQueries({ queryKey: CATEGORY_KEYS.detail(categoryId) })
+      qc.invalidateQueries({ queryKey: MEDIA_KEYS.all() })
       toast.success('Media added to category')
     },
   })
@@ -64,6 +66,7 @@ export function useRemoveMediaFromCategory() {
       categoryService.removeMedia(categoryId, mediaId),
     onSuccess: (_data, { categoryId }) => {
       qc.invalidateQueries({ queryKey: CATEGORY_KEYS.detail(categoryId) })
+      qc.invalidateQueries({ queryKey: MEDIA_KEYS.all() })
       toast.success('Media removed from category')
     },
   })

@@ -3,8 +3,8 @@ import type { CategorySummary } from '@/types'
 
 interface Props {
   categories: CategorySummary[]
-  active: string | null
-  onSelect: (cat: string | null) => void
+  active: number | null
+  onSelect: (catId: number | null) => void
 }
 
 export const CategoryFilter = memo(function CategoryFilter({ categories, active, onSelect }: Props) {
@@ -24,10 +24,10 @@ export const CategoryFilter = memo(function CategoryFilter({ categories, active,
       {categories.map(cat => (
         <button
           key={cat.id}
-          onClick={() => onSelect(cat.name)}
+          onClick={() => onSelect(cat.id)}
           className={[
             'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors',
-            active === cat.name
+            active === cat.id
               ? 'bg-violet-600 text-white'
               : 'bg-zinc-800 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700',
           ].join(' ')}

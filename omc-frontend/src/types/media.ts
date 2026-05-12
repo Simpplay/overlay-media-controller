@@ -3,7 +3,7 @@ export interface Media {
   title?: string
   filename: string
   contentType: string
-  categories: string[]
+  categories: number[]
 }
 
 export interface UploadMediaResponse {
