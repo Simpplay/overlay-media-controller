@@ -7,11 +7,17 @@ namespace omc::media
 {
 	struct MediaService::Impl {
 		MediaSourceDto mediaSourceToDto(const Media& media) {
+			std::vector<int> categoryIds;
+			for (const auto& category : media.categories) {
+				categoryIds.push_back(category.id);
+			}
+
 			return MediaSourceDto{
 				static_cast<int>(media.id),
 				media.title,
 				media.filename,
-				media.contentType
+				media.contentType,
+				categoryIds
 			};
 		}
 
@@ -38,7 +44,8 @@ namespace omc::media
 					media.id,
 					media.title,
 					media.filename,
-					media.contentType
+					media.contentType,
+					std::vector<int>{ category.id }
 					});
 			}
 

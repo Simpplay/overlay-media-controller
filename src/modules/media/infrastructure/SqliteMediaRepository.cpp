@@ -693,6 +693,7 @@ namespace omc::media
 			if (name) {
 				cat.name = reinterpret_cast<const char*>(name);
 			}
+			cat.media = fetchMediaForCategory(db_, cat.id);
 			result.push_back(std::move(cat));
 		}
 

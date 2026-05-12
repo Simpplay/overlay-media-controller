@@ -6,14 +6,14 @@
 
 namespace omc::media
 {
-	struct MediaSourceDto
-	{
-		int id;
-		std::string title;
-		std::string filename;
-		std::string contentType;
-		std::vector<int> categoryIds;
-	};
+    struct MediaSourceDto
+    {
+        int id;
+        std::string title;
+        std::string filename;
+        std::string contentType;
+        std::vector<int> categoryIds;
+    };
 
 	struct MediaFileDto
 	{
