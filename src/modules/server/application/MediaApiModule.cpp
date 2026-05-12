@@ -161,7 +161,7 @@ namespace omc::server
 				partial = true;
 			}
 
-			const size_t chunkSize =
+			const size_t responseSize =
 				(totalSize == 0) ? 0 : (end - start + 1);
 
 			res.status = partial
@@ -176,21 +176,23 @@ namespace omc::server
 			}
 
 			// ── Content provider ───────────────────────────────────
-			streamPtr->seekg(0, std::ios::end);
-			const size_t totalFileSize = static_cast<size_t>(streamPtr->tellg());
-			streamPtr->seekg(0, std::ios::beg);
-
 			constexpr size_t BUFFER_SIZE = 64 * 1024;
 			auto bufferPtr = std::make_shared<std::vector<char>>(BUFFER_SIZE);
 
 			res.set_content_provider(
-				totalFileSize,
+				responseSize,
 				contentType,
-				[streamPtr, bufferPtr](size_t offset, size_t length, httplib::DataSink& sink) -> bool
+				[streamPtr, bufferPtr, start, responseSize](size_t offset, size_t length, httplib::DataSink& sink) -> bool
 				{
-					streamPtr->seekg(static_cast<std::streamoff>(offset));
+					if (offset >= responseSize) {
+						return false;
+					}
 
-					const size_t toRead = std::min(length, size_t{ BUFFER_SIZE });
+					const size_t remaining = responseSize - offset;
+					const size_t boundedLength = std::min(length, remaining);
+					const size_t toRead = std::min(boundedLength, size_t{ BUFFER_SIZE });
+
+					streamPtr->seekg(static_cast<std::streamoff>(start + offset));
 
 					streamPtr->read(bufferPtr->data(), static_cast<std::streamsize>(toRead));
 					const size_t bytesRead = static_cast<size_t>(streamPtr->gcount());
