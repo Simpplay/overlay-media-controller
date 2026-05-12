@@ -21,8 +21,5 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
-  },
-  build: {
-    outDir: '../out/build/x64-debug/src/app/web'
   }
 })

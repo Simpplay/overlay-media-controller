@@ -38,7 +38,7 @@ namespace omc::application
 			apiServer->start(port, eventBus, *mediaService, *uiService);
 		});
 
-		std::cout << "Listening on: http://0.0.0.0:" << port << "\n";
+		std::cout << "Listening on: http://127.0.0.1:" << port << "\n";
 
 		running = true;
 		while (running) {
