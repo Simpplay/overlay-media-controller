@@ -16,8 +16,10 @@ export const mediaService = {
       filename: item.filename,
       // backend may return `contentType` (camelCase) or `content_type` (snake_case)
       contentType: item.contentType ?? '',
-      // ensure categories is always an array for the UI
-      categories: Array.isArray(item.categories) ? item.categories : [],
+      // backend returns `categoryIds`; keep fallback for legacy `categories`
+      categories: Array.isArray(item.categoryIds)
+        ? item.categoryIds
+        : (Array.isArray(item.categories) ? item.categories : []),
     }))
   },
 
@@ -29,7 +31,9 @@ export const mediaService = {
       title: item.title ?? item.name ?? '',
       filename: item.filename,
       contentType: item.contentType ?? '',
-      categories: Array.isArray(item.categories) ? item.categories : [],
+      categories: Array.isArray(item.categoryIds)
+        ? item.categoryIds
+        : (Array.isArray(item.categories) ? item.categories : []),
     }
   },
 
