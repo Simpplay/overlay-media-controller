@@ -1,5 +1,7 @@
 #include "MediaApiModule.hpp"
 
+#include <filesystem>
+
 #include "HttpUtils.hpp"
 
 namespace omc::server
@@ -30,14 +32,14 @@ namespace omc::server
 			handleDeleteMediaById(req, res);
 		});
 
-		// ── GET /api/media/:id/thumbnail ─────────────────────────────────
-		server.Get(R"(/api/media/(\d+)/thumbnail)", [this](const httplib::Request& req, httplib::Response& res) {
-			handleGetMediaThumbnail(req, res);
-		});
-
 		// ── GET /media/:id ─────────────────────────────────────────────
 		server.Get(R"(/media/(\d+))", [this](const httplib::Request& req, httplib::Response& res) {
 			handleShowMedia(req, res);
+		});
+
+		// ── GET /api/media/:id/thumbnail ─────────────────────────────────────────────
+		server.Get(R"(/api/media/(\d+)/thumbnail)", [this](const httplib::Request& req, httplib::Response& res) {
+			handleShowThumbnail(req, res);
 		});
 	}
 
@@ -124,6 +126,7 @@ namespace omc::server
 
 			// ── Abrir el fichero UNA vez ───────────────────────────
 			const std::string filePath = media->filepath;
+			std::cout << "MediaPath: " << filePath << std::endl;
 			auto streamPtr = std::make_shared<std::ifstream>(
 				filePath, std::ios::binary | std::ios::ate);
 
@@ -249,23 +252,37 @@ namespace omc::server
 		}
 	}
 
-	void MediaApiModule::handleGetMediaThumbnail(const httplib::Request& req, httplib::Response& res)
+	void MediaApiModule::handleShowThumbnail(const httplib::Request& req, httplib::Response& res)
 	{
 		try {
 			const int id = extractId(req);
-			auto media = mediaService.getMediaSourceById(id);
-			if (!media) {
-				setError(res, httplib::StatusCode::NotFound_404, "Media source not found");
+			auto media = mediaService.getMediaFileById(id);
+
+			if (!media.has_value() || media->thumbnailPath.empty()) {
+				setError(
+					res,
+					httplib::StatusCode::NotFound_404,
+					"Thumbnail not found");
+
 				return;
 			}
 
-			res.set_content("{\"thumbnail_url\":\"/thumbnails/" + std::to_string(id) + ".png\"}", "application/json");
+			// To absolute path
+			std::filesystem::path absPath = std::filesystem::absolute(media->thumbnailPath);
+			
+			res.set_file_content(absPath.string(), "image/png");
 		}
 		catch (const std::invalid_argument&) {
-			setError(res, httplib::StatusCode::BadRequest_400, "Invalid ID format");
+			setError(
+				res,
+				httplib::StatusCode::BadRequest_400,
+				"Invalid ID format");
 		}
 		catch (const std::exception& e) {
-			setError(res, httplib::StatusCode::InternalServerError_500, e.what());
+			setError(
+				res,
+				httplib::StatusCode::InternalServerError_500,
+				e.what());
 		}
 	}
 }

@@ -15,6 +15,8 @@ namespace omc::server
 		std::vector<std::unique_ptr<IApiModule>> modules;
 
 		void init(omc::event::EventBus& eb, omc::media::IMediaService& ms, omc::ui::IUiService& ui) {
+			server.set_base_dir("./web");
+
 			// Registramos los módulos
 			modules.push_back(std::make_unique<CategoriesApiModule>(eb, ms));
 			modules.push_back(std::make_unique<MediaApiModule>(eb, ms));

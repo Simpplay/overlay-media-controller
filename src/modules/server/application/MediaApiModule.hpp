@@ -23,6 +23,6 @@ namespace omc::server
 		void handleShowMedia(const httplib::Request& req, httplib::Response& res);
 		void handleGetMediaById(const httplib::Request& req, httplib::Response& res);
 		void handleDeleteMediaById(const httplib::Request& req, httplib::Response& res);
-		void handleGetMediaThumbnail(const httplib::Request& req, httplib::Response& res);
+		void handleShowThumbnail(const httplib::Request& req, httplib::Response& res);
 	};
 }

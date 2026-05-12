@@ -1,6 +1,7 @@
 #include "OverlayMediaController.hpp"
 
 #include <iostream>
+#include <objbase.h>
 
 #include "core/types/Constants.hpp"
 #include "core/threading/api/ThreadPool.hpp"
@@ -17,6 +18,12 @@ namespace omc::application
 			<< "Port: " << port << "\n";
 
 		omc::shared::ThreadPool threadPool(std::thread::hardware_concurrency());
+
+		HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+
+		if (FAILED(hr)) {
+			return;
+		}
 
 		eventBus.subscribe<omc::event::ExitApplicationRequestedEvent>([this](const omc::event::ExitApplicationRequestedEvent& event) {
 			close();
@@ -48,6 +55,8 @@ namespace omc::application
 			uiManager.update();
 			uiManager.render();
 		}
+
+		CoUninitialize();
 	}
 
 	void OverlayMediaController::close()

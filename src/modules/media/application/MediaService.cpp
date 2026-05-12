@@ -1,5 +1,6 @@
 #include "MediaService.hpp"
 
+#include <filesystem>
 #include <stdio.h>
 
 namespace omc::media
@@ -19,6 +20,7 @@ namespace omc::media
 				static_cast<int>(media.id),
 				media.filename,
 				media.filepath,
+				media.thumbnailPath,
 				media.contentType,
 				media.size
 			};
@@ -81,18 +83,18 @@ namespace omc::media
 
 	std::optional<MediaSourceDto> MediaService::getMediaSourceById(int id) {
 		const auto media = repository_->getMediaById(id);
-		if (media.id == 0) {
+		if (!media.has_value()) {
 			return std::nullopt;
 		}
-		return impl_->mediaSourceToDto(media);
+		return impl_->mediaSourceToDto(media.value());
 	}
 
 	std::optional<MediaFileDto> MediaService::getMediaFileById(int id) {
 		const auto media = repository_->getMediaById(id);
-		if (media.id == 0) {
+		if (!media.has_value()) {
 			return std::nullopt;
 		}
-		return impl_->mediaToFileDto(media);
+		return impl_->mediaToFileDto(media.value());
 	}
 
 	bool MediaService::deleteMediaSourceById(int id) {

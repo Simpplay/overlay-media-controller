@@ -6,6 +6,14 @@
 
 #include <iostream>
 
+// Thumbnail
+#include <Windows.h>
+#include <shobjidl.h>
+#include <wincodec.h>
+
+#pragma comment(lib, "windowscodecs.lib")
+#pragma comment(lib, "Ole32.lib")
+
 namespace omc::media
 {
 	// ---------------------------------------------------------------------------
@@ -56,11 +64,12 @@ namespace omc::media
 		std::vector<MediaPreview> mediaList;
 
 		const char* sql = R"(
-        SELECT
-            m.id,
-            m.title,
-            m.filename,
-            m.contentType
+		SELECT
+			m.id,
+			m.title,
+			m.filename,
+			m.contentType,
+			m.thumbnailPath
         FROM media m
         INNER JOIN media_categories mc
             ON mc.media_id = m.id
@@ -96,6 +105,11 @@ namespace omc::media
 				media.contentType = reinterpret_cast<const char*>(contentType);
 			}
 
+			const auto thumbnailPathText = sqlite3_column_text(stmt, 4);
+			if (thumbnailPathText) {
+				media.thumbnailPath = reinterpret_cast<const char*>(thumbnailPathText);
+			}
+
 			mediaList.push_back(std::move(media));
 		}
 
@@ -104,14 +118,176 @@ namespace omc::media
 		return mediaList;
 	}
 
+	bool SqliteMediaRepository::generateThumbnail(
+		const std::filesystem::path& inputPath,
+		const std::filesystem::path& outputPath,
+		int size)
+	{
+		IShellItemImageFactory* imageFactory = nullptr;
+
+		HRESULT hr = SHCreateItemFromParsingName(
+			inputPath.wstring().c_str(),
+			nullptr,
+			IID_PPV_ARGS(&imageFactory));
+
+		if (FAILED(hr) || !imageFactory) {
+			return false;
+		}
+
+		SIZE thumbnailSize{};
+		thumbnailSize.cx = size;
+		thumbnailSize.cy = size;
+
+		HBITMAP hBitmap = nullptr;
+
+		hr = imageFactory->GetImage(
+			thumbnailSize,
+			SIIGBF_BIGGERSIZEOK,
+			&hBitmap);
+
+		imageFactory->Release();
+
+		if (FAILED(hr) || !hBitmap) {
+			return false;
+		}
+
+		IWICImagingFactory* wicFactory = nullptr;
+
+		hr = CoCreateInstance(
+			CLSID_WICImagingFactory,
+			nullptr,
+			CLSCTX_INPROC_SERVER,
+			IID_PPV_ARGS(&wicFactory));
+
+		if (FAILED(hr)) {
+			DeleteObject(hBitmap);
+			return false;
+		}
+
+		IWICBitmap* wicBitmap = nullptr;
+
+		hr = wicFactory->CreateBitmapFromHBITMAP(
+			hBitmap,
+			nullptr,
+			WICBitmapUseAlpha,
+			&wicBitmap);
+
+		DeleteObject(hBitmap);
+
+		if (FAILED(hr)) {
+			wicFactory->Release();
+			return false;
+		}
+
+		IWICStream* stream = nullptr;
+
+		hr = wicFactory->CreateStream(&stream);
+
+		if (FAILED(hr)) {
+			wicBitmap->Release();
+			wicFactory->Release();
+			return false;
+		}
+
+		hr = stream->InitializeFromFilename(
+			outputPath.wstring().c_str(),
+			GENERIC_WRITE);
+
+		if (FAILED(hr)) {
+			stream->Release();
+			wicBitmap->Release();
+			wicFactory->Release();
+			return false;
+		}
+
+		IWICBitmapEncoder* encoder = nullptr;
+
+		hr = wicFactory->CreateEncoder(
+			GUID_ContainerFormatPng,
+			nullptr,
+			&encoder);
+
+		if (FAILED(hr)) {
+			stream->Release();
+			wicBitmap->Release();
+			wicFactory->Release();
+			return false;
+		}
+
+		hr = encoder->Initialize(
+			stream,
+			WICBitmapEncoderNoCache);
+
+		if (FAILED(hr)) {
+			encoder->Release();
+			stream->Release();
+			wicBitmap->Release();
+			wicFactory->Release();
+			return false;
+		}
+
+		IWICBitmapFrameEncode* frame = nullptr;
+		IPropertyBag2* props = nullptr;
+
+		hr = encoder->CreateNewFrame(&frame, &props);
+
+		if (FAILED(hr)) {
+			encoder->Release();
+			stream->Release();
+			wicBitmap->Release();
+			wicFactory->Release();
+			return false;
+		}
+
+		hr = frame->Initialize(props);
+
+		if (FAILED(hr)) {
+			if (props) props->Release();
+			frame->Release();
+			encoder->Release();
+			stream->Release();
+			wicBitmap->Release();
+			wicFactory->Release();
+			return false;
+		}
+
+		UINT width = 0;
+		UINT height = 0;
+
+		wicBitmap->GetSize(&width, &height);
+
+		frame->SetSize(width, height);
+
+		WICPixelFormatGUID format = GUID_WICPixelFormat32bppBGRA;
+
+		frame->SetPixelFormat(&format);
+
+		hr = frame->WriteSource(wicBitmap, nullptr);
+
+		if (SUCCEEDED(hr)) {
+			frame->Commit();
+			encoder->Commit();
+		}
+
+		if (props) props->Release();
+
+		frame->Release();
+		encoder->Release();
+		stream->Release();
+		wicBitmap->Release();
+		wicFactory->Release();
+
+		return SUCCEEDED(hr);
+	}
+
 	// ---------------------------------------------------------------------------
 	// Media
 	// ---------------------------------------------------------------------------
 
-	Media SqliteMediaRepository::getMediaById(int id)
+	std::optional<Media> SqliteMediaRepository::getMediaById(int id)
 	{
 		if (!db_) {
-			return Media();
+			return std::nullopt;
 		}
 
 		const char* sql = R"(
@@ -120,7 +296,8 @@ namespace omc::media
 				title,
 				filename,
 				filepath,
-				contentType
+				contentType,
+				thumbnailPath
 			FROM media
 			WHERE id = ?;
 		)";
@@ -128,42 +305,48 @@ namespace omc::media
 		sqlite3_stmt* stmt = nullptr;
 
 		if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-			return Media();
+			return std::nullopt;
 		}
 
 		sqlite3_bind_int(stmt, 1, id);
 
-		Media media;
+		std::optional<Media> media;
 
 		if (sqlite3_step(stmt) == SQLITE_ROW) {
 
-			media.id = sqlite3_column_int(stmt, 0);
+			media.emplace();
+			media->id = sqlite3_column_int(stmt, 0);
 
 			const auto title = sqlite3_column_text(stmt, 1);
 			if (title) {
-				media.title = reinterpret_cast<const char*>(title);
+				media->title = reinterpret_cast<const char*>(title);
 			}
 
 			const auto filename = sqlite3_column_text(stmt, 2);
 			if (filename) {
-				media.filename = reinterpret_cast<const char*>(filename);
+				media->filename = reinterpret_cast<const char*>(filename);
 			}
 
 			const auto filepath = sqlite3_column_text(stmt, 3);
 			if (filepath) {
-				media.filepath = reinterpret_cast<const char*>(filepath);
+				media->filepath = reinterpret_cast<const char*>(filepath);
 			}
 
 			const auto contentType = sqlite3_column_text(stmt, 4);
 			if (contentType) {
-				media.contentType = reinterpret_cast<const char*>(contentType);
+				media->contentType = reinterpret_cast<const char*>(contentType);
 			}
 
-			if (std::filesystem::exists(media.filepath)) {
-				media.size = std::filesystem::file_size(media.filepath);
+			const auto thumbnailPathText = sqlite3_column_text(stmt, 5);
+			if (thumbnailPathText) {
+				media->thumbnailPath = reinterpret_cast<const char*>(thumbnailPathText);
 			}
 
-			media.categories = fetchCategoriesForMedia(db_, media.id);
+			if (std::filesystem::exists(media->filepath)) {
+				media->size = std::filesystem::file_size(media->filepath);
+			}
+
+			media->categories = fetchCategoriesForMedia(db_, media->id);
 		}
 
 		sqlite3_finalize(stmt);
@@ -185,7 +368,8 @@ namespace omc::media
 				title,
 				filename,
 				filepath,
-				contentType
+				contentType,
+				thumbnailPath
 			FROM media;
 		)";
 
@@ -219,6 +403,11 @@ namespace omc::media
 			const unsigned char* contentTypeText = sqlite3_column_text(stmt, 4);
 			if (contentTypeText) {
 				media.contentType = reinterpret_cast<const char*>(contentTypeText);
+			}
+
+			const auto thumbnailPathText = sqlite3_column_text(stmt, 5);
+			if (thumbnailPathText) {
+				media.thumbnailPath = reinterpret_cast<const char*>(thumbnailPathText);
 			}
 
 			if (std::filesystem::exists(media.filepath)) {
@@ -274,13 +463,24 @@ namespace omc::media
 			}
 		}
 
+		auto thumbnailPath = thumbnailRoot_ / storedFilename;
+
+		auto& thumbnailFilename =
+			thumbnailPath.replace_extension(".png");
+
+		if (!generateThumbnail(fullPath, thumbnailFilename)) {
+			std::cout << "Failed to generate thumbnail for: "
+				<< fullPath << "\n";
+		}
+
 		const char* sql = R"(
 			INSERT INTO media (
 				filename,
 				filepath,
-				contentType
+				contentType,
+				thumbnailPath
 			)
-			VALUES (?, ?, ?);
+			VALUES (?, ?, ?, ?);
 		)";
 
 		sqlite3_stmt* stmt = nullptr;
@@ -294,6 +494,7 @@ namespace omc::media
 		sqlite3_bind_text(stmt, 1, filename.c_str(), -1, SQLITE_TRANSIENT);
 		sqlite3_bind_text(stmt, 2, fullPath.string().c_str(), -1, SQLITE_TRANSIENT);
 		sqlite3_bind_text(stmt, 3, contentType.c_str(), -1, SQLITE_TRANSIENT);
+		sqlite3_bind_text(stmt, 4, thumbnailFilename.string().c_str(), -1, SQLITE_TRANSIENT);
 
 		if (sqlite3_step(stmt) != SQLITE_DONE) {
 			sqlite3_finalize(stmt);
@@ -308,6 +509,7 @@ namespace omc::media
 		media.filename = filename;
 		media.filepath = fullPath.string();
 		media.contentType = contentType;
+		media.thumbnailPath = thumbnailFilename.string();
 		media.size = data.size();
 
 		return media;
@@ -317,7 +519,7 @@ namespace omc::media
 	{
 		auto media = getMediaById(id);
 
-		if (media.id == 0) {
+		if (!media.has_value()) {
 			return false;
 		}
 
@@ -346,8 +548,12 @@ namespace omc::media
 			return false;
 		}
 
-		if (std::filesystem::exists(media.filepath)) {
-			std::filesystem::remove(media.filepath);
+		if (std::filesystem::exists(media->filepath)) {
+			std::filesystem::remove(media->filepath);
+		}
+
+		if (!media->thumbnailPath.empty() && std::filesystem::exists(media->thumbnailPath)) {
+			std::filesystem::remove(media->thumbnailPath);
 		}
 
 		return true;
@@ -367,7 +573,8 @@ namespace omc::media
 				m.title,
 				m.filename,
 				m.filepath,
-				m.contentType
+				m.contentType,
+				thumbnailPath
 			FROM media m
 			INNER JOIN media_categories mc ON mc.media_id = m.id
 			WHERE mc.category_id = ?;
@@ -405,6 +612,11 @@ namespace omc::media
 			const unsigned char* contentTypeText = sqlite3_column_text(stmt, 4);
 			if (contentTypeText) {
 				media.contentType = reinterpret_cast<const char*>(contentTypeText);
+			}
+
+			const auto thumbnailPathText = sqlite3_column_text(stmt, 5);
+			if (thumbnailPathText) {
+				media.thumbnailPath = reinterpret_cast<const char*>(thumbnailPathText);
 			}
 
 			if (std::filesystem::exists(media.filepath)) {
@@ -555,7 +767,7 @@ namespace omc::media
 			return false;
 		}
 
-		if (getMediaById(mediaId).id == 0) {
+		if (!getMediaById(mediaId).has_value()) {
 			return false;
 		}
 
@@ -678,12 +890,13 @@ namespace omc::media
 
 		const char* ddl = R"(
 			CREATE TABLE IF NOT EXISTS media (
-				id          INTEGER PRIMARY KEY AUTOINCREMENT,
-				title       TEXT,
-				filename    TEXT,
-				filepath    TEXT NOT NULL,
-				contentType TEXT
-			);
+					id          INTEGER PRIMARY KEY AUTOINCREMENT,
+					title       TEXT,
+					filename    TEXT,
+					filepath    TEXT NOT NULL,
+					contentType TEXT,
+					thumbnailPath TEXT -- NUEVA COLUMNA AQUÍ
+				);
 
 			CREATE TABLE IF NOT EXISTS categories (
 				id   INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -708,10 +921,11 @@ namespace omc::media
 		return true;
 	}
 
-	SqliteMediaRepository::SqliteMediaRepository(const std::filesystem::path& mediaRoot)
-		: mediaRoot_(std::filesystem::absolute(mediaRoot))
+	SqliteMediaRepository::SqliteMediaRepository(const std::filesystem::path& mediaRoot, const std::filesystem::path& thumbnailRoot)
+		: mediaRoot_(std::filesystem::absolute(mediaRoot)), thumbnailRoot_(std::filesystem::absolute(thumbnailRoot))
 	{
 		std::filesystem::create_directories(mediaRoot_);
+		std::filesystem::create_directories(thumbnailRoot_);
 	}
 
 	SqliteMediaRepository::~SqliteMediaRepository()

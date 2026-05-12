@@ -20,6 +20,7 @@ namespace omc::media
 		int id;
 		std::string filename;
 		std::string filepath;
+		std::string thumbnailPath;
 		std::string contentType;
 		uint64_t size;
 	};
@@ -41,6 +42,7 @@ namespace omc::media
             .field("title", dto.title)
             .field("filename", dto.filename)
             .field("contentType", dto.contentType)
+			.field("categoryIds", dto.categoryIds)
             .build();
     }
 

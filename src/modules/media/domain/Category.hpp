@@ -11,6 +11,7 @@ namespace omc::media
         std::string title;
         std::string filename;
         std::string contentType;
+		std::string thumbnailPath;
     };
 
     struct Category

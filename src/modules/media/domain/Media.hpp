@@ -21,6 +21,7 @@ namespace omc::media
         std::string filepath;
         std::string contentType;
 
+		std::string thumbnailPath;
         std::vector<CategoryPreview> categories;
 
         uint64_t size = 0;
