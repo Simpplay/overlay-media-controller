@@ -54,3 +54,14 @@ export function useDeleteMedia() {
     },
   })
 }
+
+export function useRenameMedia() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, title }: { id: number; title: string }) => mediaService.patch(id, { title: title }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['media'] })
+      toast.success('Media renamed')
+    },
+  })
+}

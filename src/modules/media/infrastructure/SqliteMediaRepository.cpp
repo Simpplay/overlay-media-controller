@@ -383,7 +383,7 @@ namespace omc::media
 		return media;
 	}
 
-	std::vector<Media> SqliteMediaRepository::getAllMedia()
+	std::vector<Media> SqliteMediaRepository::getAllMedia(const std::string& query, const std::string& category)
 	{
 		std::vector<Media> result;
 
@@ -399,7 +399,8 @@ namespace omc::media
 				filepath,
 				contentType,
 				thumbnailPath
-			FROM media;
+			FROM media
+			WHERE title LIKE '%' || ? || '%' OR filename LIKE '%' || ? || '%';
 		)";
 
 		sqlite3_stmt* stmt = nullptr;
@@ -407,6 +408,9 @@ namespace omc::media
 		if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
 			return result;
 		}
+
+		sqlite3_bind_text(stmt, 1, query.c_str(), -1, SQLITE_TRANSIENT);
+		sqlite3_bind_text(stmt, 2, query.c_str(), -1, SQLITE_TRANSIENT);
 
 		while (sqlite3_step(stmt) == SQLITE_ROW) {
 
@@ -472,8 +476,6 @@ namespace omc::media
 
 		auto fullPath = mediaRoot_ / storedFilename;
 
-		std::cout << "Storing media file: " << fullPath << "\n";
-
 		{
 			std::ofstream file(fullPath, std::ios::binary);
 
@@ -506,12 +508,13 @@ namespace omc::media
 
 		const char* sql = R"(
 			INSERT INTO media (
+				title,
 				filename,
 				filepath,
 				contentType,
 				thumbnailPath
 			)
-			VALUES (?, ?, ?, ?);
+			VALUES (?, ?, ?, ?, ?);
 		)";
 
 		sqlite3_stmt* stmt = nullptr;
@@ -523,9 +526,10 @@ namespace omc::media
 		}
 
 		sqlite3_bind_text(stmt, 1, filename.c_str(), -1, SQLITE_TRANSIENT);
-		sqlite3_bind_text(stmt, 2, fullPath.string().c_str(), -1, SQLITE_TRANSIENT);
-		sqlite3_bind_text(stmt, 3, contentType.c_str(), -1, SQLITE_TRANSIENT);
-		sqlite3_bind_text(stmt, 4, thumbnailFilename.string().c_str(), -1, SQLITE_TRANSIENT);
+		sqlite3_bind_text(stmt, 2, filename.c_str(), -1, SQLITE_TRANSIENT);
+		sqlite3_bind_text(stmt, 3, fullPath.string().c_str(), -1, SQLITE_TRANSIENT);
+		sqlite3_bind_text(stmt, 4, contentType.c_str(), -1, SQLITE_TRANSIENT);
+		sqlite3_bind_text(stmt, 5, thumbnailFilename.string().c_str(), -1, SQLITE_TRANSIENT);
 
 		if (sqlite3_step(stmt) != SQLITE_DONE) {
 			sqlite3_finalize(stmt);
@@ -537,6 +541,7 @@ namespace omc::media
 
 		Media media;
 		media.id = static_cast<int>(sqlite3_last_insert_rowid(db_));
+		media.title = filename;
 		media.filename = filename;
 		media.filepath = fullPath.string();
 		media.contentType = contentType;
@@ -585,6 +590,35 @@ namespace omc::media
 
 		if (!media->thumbnailPath.empty() && std::filesystem::exists(media->thumbnailPath)) {
 			std::filesystem::remove(media->thumbnailPath);
+		}
+
+		return true;
+	}
+
+	bool SqliteMediaRepository::updateMedia(int id, const Media& updatedMedia)
+	{
+		if (!db_) {
+			return false;
+		}
+
+		const char* sql = R"(
+			UPDATE media
+			SET title = ?
+			WHERE id = ?;
+		)";
+
+		sqlite3_stmt* stmt = nullptr;
+		if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+			return false;
+		}
+
+		sqlite3_bind_text(stmt, 1, updatedMedia.title.c_str(), -1, SQLITE_TRANSIENT);
+		sqlite3_bind_int(stmt, 2, updatedMedia.id);
+		const bool success = (sqlite3_step(stmt) == SQLITE_DONE);
+		sqlite3_finalize(stmt);
+
+		if (!success) {
+			return false;
 		}
 
 		return true;
@@ -960,7 +994,7 @@ namespace omc::media
 			return;
 		}
 
-		const auto mediaList = getAllMedia();
+		const auto mediaList = getAllMedia("", "");
 
 		for (const auto& media : mediaList) {
 			if (media.filepath.empty() || !std::filesystem::exists(media.filepath)) {

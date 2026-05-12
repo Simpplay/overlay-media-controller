@@ -19,6 +19,10 @@ export interface UploadMediaParams {
   description?: string
 }
 
+export interface UpdateMediaParams {
+  title: string
+}
+
 export interface MediaListParams {
   query?: string
   category?: string

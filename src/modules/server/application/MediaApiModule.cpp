@@ -3,6 +3,7 @@
 #include <filesystem>
 
 #include "HttpUtils.hpp"
+#include <nlohmann/json.hpp>
 
 namespace omc::server
 {
@@ -32,6 +33,11 @@ namespace omc::server
 			handleDeleteMediaById(req, res);
 		});
 
+		// ── PATCH /api/media/:id ────────────────────────────────────────
+		server.Patch(R"(/api/media/(\d+))", [this](const httplib::Request& req, httplib::Response& res) {
+			handleUpdateMedia(req, res);
+		});
+
 		// ── GET /media/:id ─────────────────────────────────────────────
 		server.Get(R"(/media/(\d+))", [this](const httplib::Request& req, httplib::Response& res) {
 			handleShowMedia(req, res);
@@ -43,10 +49,50 @@ namespace omc::server
 		});
 	}
 
+	// Helpers
+
+	std::string MediaApiModule::extractTitleFromRequest(const httplib::Request& req)
+	{
+		std::string fileName;
+		if (req.form.has_field("title")) {
+			const auto& title = req.form.get_field("title");
+
+			if (fileExtension(title).empty()) {
+				if (req.form.has_file("media")) {
+					const std::string ext = fileExtension(req.form.get_file("media").filename);
+					fileName = title + ext;
+				}
+				else {
+					fileName = title;
+				}
+			}
+		}
+		else if (req.form.has_file("media")) {
+			fileName = req.form.get_file("media").filename;
+		}
+		else {
+			fileName = "";
+			auto body = nlohmann::json::parse(req.body);
+			if (body.contains("title") && body["title"].is_string() && !body["title"].get<std::string>().empty()) {
+				fileName = body["title"].get<std::string>();
+			}
+		}
+
+		return httplib::sanitize_filename(fileName);
+	}
+
 	void MediaApiModule::handleGetAllMedia(const httplib::Request& req, httplib::Response& res)
 	{
 		try {
-			auto sources = mediaService.getAllMediaSources();
+			omc::media::SearchMediaDto searchDto;
+
+			if (req.has_param("query"))
+				searchDto.query = req.get_param_value("query");
+
+			if (req.has_param("category"))
+				searchDto.category = req.get_param_value("category");
+
+			auto sources = mediaService.getAllMediaSources(searchDto);
 			res.set_content(omc::json::JsonSerializer::serialize(sources), "application/json");
 		}
 		catch (const std::exception& e) {
@@ -69,25 +115,7 @@ namespace omc::server
 		const auto& file = req.form.get_file("media");
 
 		// ── Nombre final del recurso ───────────────────────────────
-		// Si el usuario especifica un título personalizado pero no incluye
-		// extensión, heredamos la extensión del fichero original para no
-		// perder información de formato.
-		std::string rawName;
-		if (req.form.has_field("title")) {
-			rawName = req.form.get_field("title");
-
-			// Añadir la extensión original solo si el título carece de ella.
-			if (fileExtension(rawName).empty()) {
-				const std::string ext = fileExtension(file.filename);
-				if (!ext.empty())
-					rawName += ext;
-			}
-		}
-		else {
-			rawName = file.filename;
-		}
-
-		const auto safeName = httplib::sanitize_filename(rawName);
+		const auto safeName = extractTitleFromRequest(req);
 		if (safeName.empty()) {
 			setError(res, httplib::StatusCode::BadRequest_400, "Invalid filename");
 			return;
@@ -241,6 +269,37 @@ namespace omc::server
 				setError(res, httplib::StatusCode::NotFound_404, "Media source not found");
 				return;
 			}
+
+			res.status = httplib::StatusCode::OK_200;
+		}
+		catch (const std::invalid_argument&) {
+			setError(res, httplib::StatusCode::BadRequest_400, "Invalid ID format");
+		}
+		catch (const std::exception& e) {
+			setError(res, httplib::StatusCode::InternalServerError_500, e.what());
+		}
+	}
+
+	void MediaApiModule::handleUpdateMedia(const httplib::Request& req, httplib::Response& res)
+	{
+		try {
+			const int id = extractId(req);
+			omc::media::UpdateMediaDto dto;
+
+			dto.id = id;
+
+			std::string newTitle = extractTitleFromRequest(req);
+			std::cout << "Extracted title: '" << newTitle << "'" << std::endl;
+			if (!newTitle.empty()) {
+				std::cout << "Updating title to: '" << newTitle << "'" << std::endl;
+				dto.title = newTitle;
+			}
+
+			if (!mediaService.updateMediaSource(dto)) {
+				setError(res, httplib::StatusCode::NotFound_404, "Media source not found");
+				return;
+			}
+
 			res.status = httplib::StatusCode::OK_200;
 		}
 		catch (const std::invalid_argument&) {

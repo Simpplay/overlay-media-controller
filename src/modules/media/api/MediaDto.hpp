@@ -33,6 +33,19 @@ namespace omc::media
         std::vector<MediaSourceDto> media;
     };
 
+
+    // Request DTOs
+    struct SearchMediaDto {
+        std::optional<std::string> query;
+        std::optional<std::string> category;
+    };
+
+    struct UpdateMediaDto {
+        int id;
+
+        std::optional<std::string> title;
+	};
+
     inline std::string to_json(const MediaSourceDto& dto)
     {
         using omc::json::JsonSerializer;
@@ -66,6 +79,24 @@ namespace omc::media
             .field("id", dto.id)
             .field("name", dto.name)
             .field("media", dto.media)
+            .build();
+	}
+
+    inline std::string to_json(const SearchMediaDto& dto)
+    {
+        using omc::json::JsonSerializer;
+        return omc::json::JsonObject{}
+            .field_opt("query", dto.query)
+            .field_opt("category", dto.category)
+            .build();
+    }
+
+    inline std::string to_json(const UpdateMediaDto& dto)
+    {
+        using omc::json::JsonSerializer;
+        return omc::json::JsonObject{}
+			.field("id", dto.id)
+            .field_opt("title", dto.title)
             .build();
 	}
 }

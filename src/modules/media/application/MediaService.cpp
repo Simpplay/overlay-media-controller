@@ -1,7 +1,7 @@
 #include "MediaService.hpp"
 
 #include <filesystem>
-#include <stdio.h>
+#include <iostream>
 
 namespace omc::media
 {
@@ -64,8 +64,11 @@ namespace omc::media
 	// Media
 	// ---------------------------------------------------------------------------
 
-	std::vector<MediaSourceDto> MediaService::getAllMediaSources() {
-		auto media = repository_->getAllMedia();
+	std::vector<MediaSourceDto> MediaService::getAllMediaSources(const SearchMediaDto& searchDto) {
+		auto query = searchDto.query.value_or("");
+		auto category = searchDto.category.value_or("");
+
+		auto media = repository_->getAllMedia(query, category);
 		std::vector<MediaSourceDto> dtos;
 		dtos.reserve(media.size());
 
@@ -106,6 +109,19 @@ namespace omc::media
 
 	bool MediaService::deleteMediaSourceById(int id) {
 		return repository_->deleteMediaById(id);
+	}
+
+	bool MediaService::updateMediaSource(UpdateMediaDto& newMedia) {
+		auto media = repository_->getMediaById(newMedia.id);
+		if (!media) {
+			return false;
+		}
+
+		if (newMedia.title) {
+			media->title = newMedia.title.value();
+		}
+
+		return repository_->updateMedia(newMedia.id, media.value());
 	}
 
 	// ---------------------------------------------------------------------------

@@ -14,7 +14,7 @@ namespace omc::media
 		MediaService(std::shared_ptr<IMediaRepository> repository);
 		~MediaService();
 
-		std::vector<MediaSourceDto> getAllMediaSources() override;
+		std::vector<MediaSourceDto> getAllMediaSources(const SearchMediaDto& searchDto) override;
 
 		MediaSourceDto addMediaSource(
 			std::span<const std::byte> data,
@@ -26,6 +26,7 @@ namespace omc::media
 		std::optional<MediaFileDto> getMediaFileById(int id) override;
 
 		bool deleteMediaSourceById(int id) override;
+		bool updateMediaSource(UpdateMediaDto& newMedia) override;
 
 		// Category management
 		std::vector<MediaCategoryDto> getAllCategories() override;
@@ -35,6 +36,7 @@ namespace omc::media
 
 		bool addMediaToCategory(int mediaId, int categoryId) override;
 		bool removeMediaFromCategory(int mediaId, int categoryId) override;
+		
 		std::vector<MediaSourceDto> getMediaByCategoryId(int categoryId) override;
 	private:
 		struct Impl;

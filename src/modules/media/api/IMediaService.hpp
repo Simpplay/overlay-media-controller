@@ -12,7 +12,7 @@ namespace omc::media
 	public:
 		virtual ~IMediaService() = default;
 
-		virtual std::vector<omc::media::MediaSourceDto> getAllMediaSources() = 0;
+		virtual std::vector<omc::media::MediaSourceDto> getAllMediaSources(const SearchMediaDto& searchDto) = 0;
 
 		virtual MediaSourceDto addMediaSource(
 			std::span<const std::byte> data,
@@ -24,6 +24,7 @@ namespace omc::media
 		virtual std::optional<MediaFileDto> getMediaFileById(int id) = 0;
 
 		virtual bool deleteMediaSourceById(int id) = 0;
+		virtual bool updateMediaSource(UpdateMediaDto& newMedia) = 0;
 
 		// Category management
 		virtual std::vector<MediaCategoryDto> getAllCategories() = 0;

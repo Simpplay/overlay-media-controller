@@ -14,10 +14,11 @@ namespace omc::media
 		virtual ~IMediaRepository() = default;
 
 		virtual std::optional<Media> getMediaById(int id) = 0;
-		virtual std::vector<Media> getAllMedia() = 0;
+		virtual std::vector<Media> getAllMedia(const std::string& query, const std::string& category) = 0;
 
 		virtual Media addMedia(const std::vector<std::byte>& data, const std::string& filename, const std::string& contentType) = 0;
 		virtual bool deleteMediaById(int id) = 0;
+		virtual bool updateMedia(int id, const Media& updatedMedia) = 0;
 
 
 		// Category management

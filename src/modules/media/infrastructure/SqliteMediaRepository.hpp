@@ -20,9 +20,10 @@ namespace omc::media
 		bool initializeDatabase(std::string& out);
 
 		std::optional<Media> getMediaById(int id) override;
-		std::vector<Media> getAllMedia() override;
+		std::vector<Media> getAllMedia(const std::string& query, const std::string& category) override;
 		Media addMedia(const std::vector<std::byte>& data, const std::string& filename, const std::string& contentType) override;
 		bool deleteMediaById(int id) override;
+		bool updateMedia(int id, const Media& updatedMedia);
 
 		// Category management
 		std::vector<Category> getAllCategories() override;

@@ -2,6 +2,7 @@ import api from './api'
 import type {
   Media,
   MediaListParams,
+  UpdateMediaParams,
   UploadMediaParams,
   UploadMediaResponse
 } from '@/types'
@@ -48,6 +49,11 @@ export const mediaService = {
 
   delete: async (id: number): Promise<void> => {
     await api.delete(`/media/${id}`)
+  },
+
+  patch: async (id: number, data: Partial<UpdateMediaParams>): Promise<Media> => {
+    const res = await api.patch(`/media/${id}`, data)
+    return res.data
   },
 
   getThumbnail: async (id: number): Promise<string> => {

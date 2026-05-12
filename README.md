@@ -117,6 +117,7 @@ Media resources represent uploaded multimedia assets such as videos, audio files
 | `POST` | `/api/media` | Upload media |
 | `GET` | `/api/media/:id` | Retrieve a single media |
 | `DELETE` | `/api/media/:id` | Delete media |
+| `PATCH` | `/api/media/:id` | Update media metadata |
 | `GET` | `/api/media/:id/thumbnail` | Retrieve media thumbnail |
 
 ---
@@ -143,15 +144,13 @@ multipart/form-data
 |---|---|---|---|
 | `media` | file | Yes | Media file to upload |
 | `title` | string | No | Display title |
-| `description` | string | No | Media description |
 
 ### Example
 
 ```bash
 curl -X POST http://localhost:8080/api/media \
   -F "media=@video.mp4" \
-  -F "title=Demo Video" \
-  -F "description=Test upload"
+  -F "title=Demo Video"
 ```
 
 ### Response
@@ -258,6 +257,46 @@ DELETE /api/media/:id
 
 ---
 
+## Update Media Metadata
+
+Updates media metadata such as title.
+
+## Request
+```http
+PATCH /api/media/:id
+```
+
+## Request Fields
+
+| Field | Description | Type | 
+| --- | --- | --- |
+| `title` | The new title of the media | `string` |
+
+
+## Request Example
+```json
+{
+    "title": "Updated Title"
+}
+```
+
+## Response
+
+#### 200 OK
+```json
+{
+    "id": 1,
+    "title": "Updated Title",
+    "filename": "video.mp4",
+    "content_type": "video/mp4",
+    "categories": [
+        "Videos"
+    ]
+}
+```
+
+---
+
 ## Get Media Thumbnail
 
 Returns the thumbnail associated with a media resource.
@@ -272,11 +311,7 @@ GET /api/media/:id/thumbnail
 
 #### 200 OK
 
-```json
-{
-    "thumbnail_url": "/thumbnails/1.png"
-}
-```
+Thumbnail in png format with size of 256x256
 
 ---
 
