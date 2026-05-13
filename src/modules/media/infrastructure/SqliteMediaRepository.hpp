@@ -39,6 +39,10 @@ namespace omc::media
 		void ensureThumbnailsForStoredMedia();
 
 	private:
+		std::string toStoredRelativePath(const std::filesystem::path& absolutePath, const std::filesystem::path& root) const;
+		std::filesystem::path resolveStoredPath(const std::string& storedPath, const std::filesystem::path& root) const;
+		bool migrateStoredPathsToRelative(std::string& out);
+
 		sqlite3* db_ = nullptr;
 		std::string dbPath_;
 		std::unique_ptr<omc::shared::ThreadPool> thumbnailThreadPool_;
