@@ -18,97 +18,23 @@
 
 namespace omc::media
 {
-	std::string SqliteMediaRepository::toStoredRelativePath(
-		const std::filesystem::path& absolutePath,
-		const std::filesystem::path& root) const
-	{
-		const auto normalizedRoot = std::filesystem::weakly_canonical(root);
-		const auto normalizedPath = std::filesystem::weakly_canonical(absolutePath);
-		auto relativePath = std::filesystem::relative(normalizedPath, normalizedRoot);
-		return relativePath.generic_string();
-	}
-
-	std::filesystem::path SqliteMediaRepository::resolveStoredPath(
-		const std::string& storedPath,
-		const std::filesystem::path& root) const
-	{
-		if (storedPath.empty()) {
-			return {};
-		}
-
-		std::filesystem::path stored(storedPath);
-		if (stored.is_absolute()) {
-			return stored;
-		}
-
-		return root / stored;
-	}
-
-	bool SqliteMediaRepository::migrateStoredPathsToRelative(std::string& out)
-	{
-		if (!db_) {
-			return false;
-		}
-
-		const char* sql = "SELECT id, filepath, thumbnailPath FROM media;";
-		sqlite3_stmt* stmt = nullptr;
-		if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-			out = "Failed to prepare migration query";
-			return false;
-		}
-
-		const char* updateSql = "UPDATE media SET filepath = ?, thumbnailPath = ? WHERE id = ?;";
-		sqlite3_stmt* updateStmt = nullptr;
-		if (sqlite3_prepare_v2(db_, updateSql, -1, &updateStmt, nullptr) != SQLITE_OK) {
-			sqlite3_finalize(stmt);
-			out = "Failed to prepare migration update query";
-			return false;
-		}
-
-		while (sqlite3_step(stmt) == SQLITE_ROW) {
-			const int id = sqlite3_column_int(stmt, 0);
-			const unsigned char* filepathText = sqlite3_column_text(stmt, 1);
-			const unsigned char* thumbnailPathText = sqlite3_column_text(stmt, 2);
-
-			if (!filepathText) {
-				continue;
-			}
-
-			const std::string filepathRaw = reinterpret_cast<const char*>(filepathText);
-			const std::string thumbnailRaw = thumbnailPathText
-				? reinterpret_cast<const char*>(thumbnailPathText)
-				: "";
-
-			const auto filepathAbsolute = resolveStoredPath(filepathRaw, mediaRoot_);
-			const auto thumbnailAbsolute = resolveStoredPath(thumbnailRaw, thumbnailRoot_);
-
-			const auto filepathRelative = toStoredRelativePath(filepathAbsolute, mediaRoot_);
-			const auto thumbnailRelative = thumbnailRaw.empty()
-				? ""
-				: toStoredRelativePath(thumbnailAbsolute, thumbnailRoot_);
-
-			sqlite3_reset(updateStmt);
-			sqlite3_clear_bindings(updateStmt);
-			sqlite3_bind_text(updateStmt, 1, filepathRelative.c_str(), -1, SQLITE_TRANSIENT);
-			sqlite3_bind_text(updateStmt, 2, thumbnailRelative.c_str(), -1, SQLITE_TRANSIENT);
-			sqlite3_bind_int(updateStmt, 3, id);
-
-			if (sqlite3_step(updateStmt) != SQLITE_DONE) {
-				sqlite3_finalize(updateStmt);
-				sqlite3_finalize(stmt);
-				out = "Failed updating migrated media paths";
-				return false;
-			}
-		}
-
-		sqlite3_finalize(updateStmt);
-		sqlite3_finalize(stmt);
-		return true;
-	}
-
 	// ---------------------------------------------------------------------------
 	// Helpers
 	// ---------------------------------------------------------------------------
+
+	static std::filesystem::path toRelativePath(
+		const std::filesystem::path& fullPath,
+		const std::filesystem::path& basePath)
+	{
+		return std::filesystem::relative(fullPath, basePath);
+	}
+
+	static std::filesystem::path toAbsolutePath(
+		const std::filesystem::path& relativePath,
+		const std::filesystem::path& basePath)
+	{
+		return std::filesystem::weakly_canonical(basePath / relativePath);
+	}
 
 	static std::vector<CategoryPreview> fetchCategoriesForMedia(sqlite3* db, int mediaId)
 	{
@@ -447,7 +373,7 @@ namespace omc::media
 
 			const auto filepath = sqlite3_column_text(stmt, 3);
 			if (filepath) {
-				media->filepath = reinterpret_cast<const char*>(filepath);
+				media->filepath = toAbsolutePath(reinterpret_cast<const char*>(filepath), mediaRoot_).string();
 			}
 
 			const auto contentType = sqlite3_column_text(stmt, 4);
@@ -457,15 +383,11 @@ namespace omc::media
 
 			const auto thumbnailPathText = sqlite3_column_text(stmt, 5);
 			if (thumbnailPathText) {
-				media->thumbnailPath = reinterpret_cast<const char*>(thumbnailPathText);
+				media->thumbnailPath = toAbsolutePath(reinterpret_cast<const char*>(thumbnailPathText), thumbnailRoot_).string();
 			}
 
-			const auto resolvedFilepath = resolveStoredPath(media->filepath, mediaRoot_);
-			media->filepath = resolvedFilepath.string();
-			media->thumbnailPath = resolveStoredPath(media->thumbnailPath, thumbnailRoot_).string();
-
-			if (std::filesystem::exists(resolvedFilepath)) {
-				media->size = std::filesystem::file_size(resolvedFilepath);
+			if (std::filesystem::exists(media->filepath)) {
+				media->size = std::filesystem::file_size(media->filepath);
 			}
 
 			media->categories = fetchCategoriesForMedia(db_, media->id);
@@ -523,7 +445,7 @@ namespace omc::media
 
 			const unsigned char* filepathText = sqlite3_column_text(stmt, 3);
 			if (filepathText) {
-				media.filepath = reinterpret_cast<const char*>(filepathText);
+				media.filepath = toAbsolutePath(reinterpret_cast<const char*>(filepathText), mediaRoot_).string();
 			}
 
 			const unsigned char* contentTypeText = sqlite3_column_text(stmt, 4);
@@ -533,14 +455,11 @@ namespace omc::media
 
 			const auto thumbnailPathText = sqlite3_column_text(stmt, 5);
 			if (thumbnailPathText) {
-				media.thumbnailPath = reinterpret_cast<const char*>(thumbnailPathText);
+				media.thumbnailPath = toAbsolutePath(reinterpret_cast<const char*>(thumbnailPathText), thumbnailRoot_).string();
 			}
 
-			const auto resolvedFilepath = resolveStoredPath(media.filepath, mediaRoot_);
-			media.filepath = resolvedFilepath.string();
-			media.thumbnailPath = resolveStoredPath(media.thumbnailPath, thumbnailRoot_).string();
-			if (std::filesystem::exists(resolvedFilepath)) {
-				media.size = std::filesystem::file_size(resolvedFilepath);
+			if (std::filesystem::exists(media.filepath)) {
+				media.size = std::filesystem::file_size(media.filepath);
 			}
 
 			media.categories = fetchCategoriesForMedia(db_, media.id);
@@ -621,14 +540,17 @@ namespace omc::media
 			return Media();
 		}
 
+		const auto relativeMediaPath =
+			toRelativePath(fullPath, mediaRoot_);
+
+		const auto relativeThumbnailPath =
+			toRelativePath(thumbnailFilename, thumbnailRoot_);
+
 		sqlite3_bind_text(stmt, 1, filename.c_str(), -1, SQLITE_TRANSIENT);
 		sqlite3_bind_text(stmt, 2, filename.c_str(), -1, SQLITE_TRANSIENT);
-		const auto storedFilepath = toStoredRelativePath(fullPath, mediaRoot_);
-		const auto storedThumbnailPath = toStoredRelativePath(thumbnailFilename, thumbnailRoot_);
-
-		sqlite3_bind_text(stmt, 3, storedFilepath.c_str(), -1, SQLITE_TRANSIENT);
+		sqlite3_bind_text(stmt, 3, relativeMediaPath.string().c_str(), -1, SQLITE_TRANSIENT);
 		sqlite3_bind_text(stmt, 4, contentType.c_str(), -1, SQLITE_TRANSIENT);
-		sqlite3_bind_text(stmt, 5, storedThumbnailPath.c_str(), -1, SQLITE_TRANSIENT);
+		sqlite3_bind_text(stmt, 5, relativeThumbnailPath.string().c_str(), -1, SQLITE_TRANSIENT);
 
 		if (sqlite3_step(stmt) != SQLITE_DONE) {
 			sqlite3_finalize(stmt);
@@ -642,9 +564,9 @@ namespace omc::media
 		media.id = static_cast<int>(sqlite3_last_insert_rowid(db_));
 		media.title = filename;
 		media.filename = filename;
-		media.filepath = fullPath.string();
+		media.filepath = relativeMediaPath.string().c_str();
 		media.contentType = contentType;
-		media.thumbnailPath = thumbnailFilename.string();
+		media.thumbnailPath = relativeThumbnailPath.string().c_str();
 		media.size = data.size();
 
 		return media;
@@ -770,7 +692,7 @@ namespace omc::media
 
 			const unsigned char* filepathText = sqlite3_column_text(stmt, 3);
 			if (filepathText) {
-				media.filepath = reinterpret_cast<const char*>(filepathText);
+				media.filepath = toAbsolutePath(reinterpret_cast<const char*>(filepathText), mediaRoot_).string();
 			}
 
 			const unsigned char* contentTypeText = sqlite3_column_text(stmt, 4);
@@ -780,14 +702,11 @@ namespace omc::media
 
 			const auto thumbnailPathText = sqlite3_column_text(stmt, 5);
 			if (thumbnailPathText) {
-				media.thumbnailPath = reinterpret_cast<const char*>(thumbnailPathText);
+				media.thumbnailPath = toAbsolutePath(reinterpret_cast<const char*>(thumbnailPathText), thumbnailRoot_).string();
 			}
 
-			const auto resolvedFilepath = resolveStoredPath(media.filepath, mediaRoot_);
-			media.filepath = resolvedFilepath.string();
-			media.thumbnailPath = resolveStoredPath(media.thumbnailPath, thumbnailRoot_).string();
-			if (std::filesystem::exists(resolvedFilepath)) {
-				media.size = std::filesystem::file_size(resolvedFilepath);
+			if (std::filesystem::exists(media.filepath)) {
+				media.size = std::filesystem::file_size(media.filepath);
 			}
 
 			media.categories = fetchCategoriesForMedia(db_, media.id);
@@ -1087,7 +1006,7 @@ namespace omc::media
 			return false;
 		}
 
-		return migrateStoredPathsToRelative(out);
+		return true;
 	}
 
 	void SqliteMediaRepository::ensureThumbnailsForStoredMedia()
@@ -1099,30 +1018,29 @@ namespace omc::media
 		const auto mediaList = getAllMedia("", "");
 
 		for (const auto& media : mediaList) {
-			const auto resolvedFilepath = resolveStoredPath(media.filepath, mediaRoot_);
-			if (resolvedFilepath.empty() || !std::filesystem::exists(resolvedFilepath)) {
+			if (media.filepath.empty() || !std::filesystem::exists(media.filepath)) {
 				continue;
 			}
 
 			std::filesystem::path thumbnailPath = media.thumbnailPath.empty()
-				? (thumbnailRoot_ / std::filesystem::path(resolvedFilepath).filename()).replace_extension(".png")
-				: resolveStoredPath(media.thumbnailPath, thumbnailRoot_);
+				? (thumbnailRoot_ / std::filesystem::path(media.filepath).filename()).replace_extension(".png")
+				: std::filesystem::path(media.thumbnailPath);
 
 			if (std::filesystem::exists(thumbnailPath)) {
 				continue;
 			}
 
-			if (!generateThumbnail(resolvedFilepath, thumbnailPath)) {
-				std::cout << "Failed to generate missing thumbnail for: " << resolvedFilepath << "\n";
+			if (!generateThumbnail(media.filepath, thumbnailPath)) {
+				std::cout << "Failed to generate missing thumbnail for: " << media.filepath << "\n";
 				continue;
 			}
 
 			if (media.thumbnailPath.empty()) {
+				const auto relativeThumbnailPath = toRelativePath(thumbnailPath, thumbnailRoot_).string();
 				const char* sql = "UPDATE media SET thumbnailPath = ? WHERE id = ?;";
 				sqlite3_stmt* stmt = nullptr;
 				if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
-					const auto storedThumbnailPath = toStoredRelativePath(thumbnailPath, thumbnailRoot_);
-					sqlite3_bind_text(stmt, 1, storedThumbnailPath.c_str(), -1, SQLITE_TRANSIENT);
+					sqlite3_bind_text(stmt, 1, relativeThumbnailPath.c_str(), -1, SQLITE_TRANSIENT);
 					sqlite3_bind_int(stmt, 2, media.id);
 					sqlite3_step(stmt);
 				}
