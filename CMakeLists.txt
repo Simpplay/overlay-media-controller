@@ -104,10 +104,24 @@ endif ()
 # Packaging helper
 # =========================================================
 
+set(PORTABLE_DIR
+    ${CMAKE_BINARY_DIR}/overlay-media-controller-${PROJECT_VERSION}-win64
+)
+
 add_custom_target(package-portable
+
+    COMMAND ${CMAKE_COMMAND} -E rm -rf ${PORTABLE_DIR}
+
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${PORTABLE_DIR}
+
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        ${PORTABLE_DIR}
+
     COMMAND ${CMAKE_COMMAND} -E tar "cfv"
         ${CMAKE_BINARY_DIR}/overlay-media-controller-${PROJECT_VERSION}-win64.zip
         --format=zip
-        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-    COMMENT "Creating portable ZIP package"
+        ${PORTABLE_DIR}
+
+    COMMENT "Creating portable package"
 )
