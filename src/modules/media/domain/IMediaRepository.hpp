@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <optional>
 
 #include "Media.hpp"
 #include "Category.hpp"

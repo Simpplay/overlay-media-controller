@@ -1,61 +1,85 @@
 {
-  "version": 3,
+  "version": 6,
+
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+
   "configurePresets": [
     {
-      "name": "x64-debug",
-      "displayName": "x64 Debug",
-      "description": "Configuración Debug para x64 usando Ninja y vcpkg",
+      "name": "base",
+      "hidden": true,
+
       "generator": "Ninja",
+
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "installDir": "${sourceDir}/out/install/${presetName}",
-      "architecture": {
-        "value": "x64",
-        "strategy": "external"
-      },
-      "toolset": {
-        "value": "host=x64",
-        "strategy": "external"
-      },
+
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_TOOLCHAIN_FILE": {
-          "type": "FILEPATH",
-          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-        }
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       },
+
       "vendor": {
-        "://microsoft.com": {
-          "hostOS": [ "Windows" ]
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": [
+            "Windows"
+          ]
         }
       }
     },
+
     {
-      "name": "x64-release",
-      "displayName": "x64 Release",
-      "description": "Configuración Release para x64 usando Ninja y vcpkg",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
-      "installDir": "${sourceDir}/out/install/${presetName}",
+      "name": "x64-debug",
+      "inherits": "base",
+
+      "displayName": "x64 Debug",
+
       "architecture": {
         "value": "x64",
         "strategy": "external"
       },
-      "toolset": {
-        "value": "host=x64",
+
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+
+    {
+      "name": "x64-release",
+      "inherits": "base",
+
+      "displayName": "x64 Release",
+
+      "architecture": {
+        "value": "x64",
         "strategy": "external"
       },
+
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_TOOLCHAIN_FILE": {
-          "type": "FILEPATH",
-          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-        }
-      },
-      "vendor": {
-        "://microsoft.com": {
-          "hostOS": [ "Windows" ]
-        }
+        "CMAKE_BUILD_TYPE": "Release"
       }
+    }
+  ],
+
+  "buildPresets": [
+    {
+      "name": "build-debug",
+      "configurePreset": "x64-debug"
+    },
+
+    {
+      "name": "build-release",
+      "configurePreset": "x64-release"
+    }
+  ],
+
+  "testPresets": [
+    {
+      "name": "test-debug",
+      "configurePreset": "x64-debug"
     }
   ]
 }

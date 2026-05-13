@@ -1,0 +1,122 @@
+name: Build Windows
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+
+  workflow_dispatch:
+
+  release:
+    types:
+      - created
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    permissions:
+      contents: write
+
+    env:
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+
+    steps:
+
+      # =====================================================
+      # Checkout
+      # =====================================================
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # =====================================================
+      # Node.js
+      # =====================================================
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # =====================================================
+      # MSVC
+      # =====================================================
+
+      - name: Setup MSVC Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+
+      # =====================================================
+      # Ninja
+      # =====================================================
+
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      # =====================================================
+      # vcpkg cache
+      # =====================================================
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/vcpkg
+            build/vcpkg_installed
+            out/build/x64-release/vcpkg_installed
+          key: >
+            vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+
+      # =====================================================
+      # Setup vcpkg
+      # =====================================================
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+
+      # =====================================================
+      # Configure
+      # =====================================================
+
+      - name: Configure CMake
+        run: cmake --preset x64-release
+
+      # =====================================================
+      # Build
+      # =====================================================
+
+      - name: Build
+        run: cmake --build --preset build-release
+
+      # =====================================================
+      # Package portable ZIP
+      # =====================================================
+
+      - name: Package portable ZIP
+        run: cmake --build --preset build-release --target package-portable
+
+      # =====================================================
+      # Upload artifact
+      # =====================================================
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: overlay-media-controller-win64
+          path: |
+            out/build/x64-release/*.zip
+
+      # =====================================================
+      # Publish GitHub Release assets
+      # =====================================================
+
+      - name: Publish Release Asset
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            out/build/x64-release/*.zip

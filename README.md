@@ -1,3 +1,5 @@
+![Build](https://github.com/Simpplay/overlay-media-controller/actions/workflows/build.yml/badge.svg)
+
 # Overlay Media Controller
 
 A C++ application that manages always-on-top overlays through an HTTP REST API, using
