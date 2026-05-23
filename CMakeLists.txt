@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.20)
 
 project(
     overlay-media-controller
-    VERSION 1.0.0
     DESCRIPTION "Overlay Media Controller"
     LANGUAGES CXX
 )
@@ -41,6 +40,8 @@ string(JSON APP_VERSION
        GET
        "${VERSION_JSON}"
        version)
+
+set(PROJECT_VERSION ${APP_VERSION})
 
 string(JSON APP_CHANNEL
        GET
@@ -128,7 +129,7 @@ endif ()
 # =========================================================
 
 set(PORTABLE_DIR
-    ${CMAKE_BINARY_DIR}/overlay-media-controller-${PROJECT_VERSION}-win64
+    ${CMAKE_BINARY_DIR}/overlay-media-controller-${APP_VERSION}-win64
 )
 
 add_custom_target(package-portable
@@ -142,7 +143,7 @@ add_custom_target(package-portable
         ${PORTABLE_DIR}
 
     COMMAND ${CMAKE_COMMAND} -E tar "cfv"
-        ${CMAKE_BINARY_DIR}/overlay-media-controller-${PROJECT_VERSION}-win64.zip
+        ${CMAKE_BINARY_DIR}/overlay-media-controller-${APP_VERSION}-win64.zip
         --format=zip
         ${PORTABLE_DIR}
 

@@ -125,17 +125,13 @@ jobs:
         run: cmake --build --preset build-release --target package-portable
 
       # =====================================================
-      # Rename ZIP with version
+      # Debug package output
       # =====================================================
 
-      - name: Rename ZIP
+      - name: Debug package output
         shell: pwsh
         run: |
-          $zip = Get-ChildItem out/build/x64-release/*.zip | Select-Object -First 1
-
-          $newName = "overlay-media-controller-$env:VERSION-win64.zip"
-
-          Rename-Item $zip.FullName $newName
+          Get-ChildItem -Recurse out/build/x64-release
 
       # =====================================================
       # Upload artifact
@@ -146,7 +142,7 @@ jobs:
         with:
           name: overlay-media-controller-${{ env.VERSION }}
           path: |
-            overlay-media-controller-${{ env.VERSION }}-win64.zip
+            out/build/x64-release/overlay-media-controller-${{ env.VERSION }}-win64.zip
 
       # =====================================================
       # Create GitHub Release
@@ -159,4 +155,4 @@ jobs:
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
           files: |
-            overlay-media-controller-${{ env.VERSION }}-win64.zip
+            out/build/x64-release/overlay-media-controller-${{ env.VERSION }}-win64.zip
