@@ -46,25 +46,30 @@ cmake --build build --parallel
 ### Default configuration
 
 ```bash
-./build/overlay-media-controller
+./overlay-media-controller
 ```
 
 Uses:
-- Database: `overlays.db`
+- Database: `overlay_media_controller.db`
 - Port: `8080`
 
-### Custom database path and port
+### Optional command-line arguments
+
+| Argument | Description | Default |
+| --- | --- | --- |
+| `db-path` | Path to the SQLite database file | `overlay_media_controller.db` |
+| `port` | Port for the API server | `8080` |
 
 ```bash
-./build/overlay-media-controller /var/db/overlays.db 9090
+./overlay-media-controller --db-path another_database.db --port 9090
 ```
 
 ### Using environment variables
 
 ```bash
-OMC_DB_PATH=/var/db/overlays.db \
+OMC_DB_PATH=another_database.db \
 OMC_PORT=9090 \
-./build/overlay-media-controller
+./overlay-media-controller
 ```
 
 ---

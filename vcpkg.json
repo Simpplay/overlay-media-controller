@@ -8,7 +8,8 @@
     "sqlite3",
     "cpp-httplib",
     "gtest",
-    "nlohmann-json"
+    "nlohmann-json",
+    "cli11"
   ],
   "builtin-baseline": "ec3ad1c0b013c51116b7eed2ae25bcfc38e639e9"
 }

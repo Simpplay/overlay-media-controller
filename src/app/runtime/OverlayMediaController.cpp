@@ -3,6 +3,7 @@
 #include <iostream>
 #include <objbase.h>
 
+#include "version.h"
 #include "core/types/Constants.hpp"
 #include "core/threading/api/ThreadPool.hpp"
 
@@ -13,7 +14,7 @@ namespace omc::application
 	void OverlayMediaController::initialize(std::string dbPath, int port)
 	{
 		std::cout 
-			<< APP_NAME << "\n"
+			<< APP_NAME << " v" << APP_VERSION << " (" << APP_CHANNEL << ")\n"
 			<< "Database: " << dbPath << "\n"
 			<< "Port: " << port << "\n";
 

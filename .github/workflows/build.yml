@@ -1,17 +1,13 @@
 name: Build Windows
 
 on:
-  push:
-    branches:
-      - main
-
   pull_request:
 
-  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
 
-  release:
-    types:
-      - created
+  workflow_dispatch:
 
 jobs:
   build:
@@ -31,6 +27,35 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # =====================================================
+      # Read version.json
+      # =====================================================
+
+      - name: Read version.json
+        id: version
+        shell: pwsh
+        run: |
+          $json = Get-Content version.json | ConvertFrom-Json
+
+          echo "VERSION=$($json.version)" >> $env:GITHUB_ENV
+
+      # =====================================================
+      # Validate tag matches version.json
+      # =====================================================
+
+      - name: Validate version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $json = Get-Content version.json | ConvertFrom-Json
+
+          $expected = "v$($json.version)"
+          $actual = "${{ github.ref_name }}"
+
+          if ($expected -ne $actual) {
+            throw "Tag '$actual' does not match version.json '$expected'"
+          }
 
       # =====================================================
       # Node.js
@@ -58,7 +83,7 @@ jobs:
         uses: seanmiddleditch/gha-setup-ninja@v5
 
       # =====================================================
-      # vcpkg cache
+      # Restore vcpkg cache
       # =====================================================
 
       - name: Restore vcpkg cache
@@ -93,11 +118,24 @@ jobs:
         run: cmake --build --preset build-release
 
       # =====================================================
-      # Package portable ZIP
+      # Package
       # =====================================================
 
       - name: Package portable ZIP
         run: cmake --build --preset build-release --target package-portable
+
+      # =====================================================
+      # Rename ZIP with version
+      # =====================================================
+
+      - name: Rename ZIP
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem out/build/x64-release/*.zip | Select-Object -First 1
+
+          $newName = "overlay-media-controller-$env:VERSION-win64.zip"
+
+          Rename-Item $zip.FullName $newName
 
       # =====================================================
       # Upload artifact
@@ -106,17 +144,19 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: overlay-media-controller-win64
+          name: overlay-media-controller-${{ env.VERSION }}
           path: |
-            out/build/x64-release/*.zip
+            overlay-media-controller-${{ env.VERSION }}-win64.zip
 
       # =====================================================
-      # Publish GitHub Release assets
+      # Create GitHub Release
       # =====================================================
 
-      - name: Publish Release Asset
-        if: github.event_name == 'release'
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
           files: |
-            out/build/x64-release/*.zip
+            overlay-media-controller-${{ env.VERSION }}-win64.zip

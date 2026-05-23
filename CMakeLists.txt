@@ -32,6 +32,28 @@ if (MINGW)
 endif()
 
 # =========================================================
+# Read version from version.json
+# =========================================================
+
+file(READ "${CMAKE_SOURCE_DIR}/version.json" VERSION_JSON)
+
+string(JSON APP_VERSION
+       GET
+       "${VERSION_JSON}"
+       version)
+
+string(JSON APP_CHANNEL
+       GET
+       "${VERSION_JSON}"
+       channel)
+
+configure_file(
+    ${CMAKE_SOURCE_DIR}/cmake/version.h.in
+    ${CMAKE_BINARY_DIR}/generated/version.h
+    @ONLY
+)
+
+# =========================================================
 # Frontend configuration
 # =========================================================
 
@@ -53,6 +75,7 @@ set(WEB_OUTPUT_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/web)
 find_package(unofficial-webview2 CONFIG REQUIRED)
 find_package(httplib CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(CLI11 CONFIG REQUIRED)
 
 find_package(unofficial-sqlite3 CONFIG QUIET)
 find_package(GTest CONFIG QUIET)
