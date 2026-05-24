@@ -6,7 +6,13 @@
   "dependencies": [
     "webview2",
     "sqlite3",
-    "cpp-httplib",
+    {
+      "name": "cpp-httplib",
+      "features": [
+        "openssl"
+      ]
+    },
+    "openssl",
     "gtest",
     "nlohmann-json",
     "cli11"

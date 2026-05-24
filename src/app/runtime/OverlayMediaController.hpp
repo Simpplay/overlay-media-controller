@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "core/event/api/EventBus.hpp"
+#include "core/updates/application/Updater.hpp"
 
 #include "modules/ui/runtime/UiManager.hpp"
 #include "modules/ui/domain/UiRepository.hpp"
@@ -16,16 +17,28 @@
 
 namespace omc::application
 {
+	struct OverlayMediaControllerConfig
+	{
+		// Obligatory parameters
+		std::string dbPath;
+		int port;
+
+		// Optional parameters with defaults
+		bool skipUpdates = false;
+	};
+
 	class OverlayMediaController
 	{
 	public:
-		void initialize(std::string dbPath, int port);
+		void initialize(const OverlayMediaControllerConfig& config);
 		void close();
 
 	private:
 		bool running{ false };
 
 		omc::event::EventBus eventBus;
+
+		omc::application::Updater updater{ eventBus };
 
 		std::shared_ptr<omc::ui::UiRepository> uiRepository = std::make_shared<omc::ui::UiRepository>();
 		std::unique_ptr<omc::ui::UiService> uiService = std::make_unique<omc::ui::UiService>(eventBus, uiRepository);

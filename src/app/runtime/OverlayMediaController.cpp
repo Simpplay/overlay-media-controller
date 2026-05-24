@@ -11,12 +11,12 @@
 
 namespace omc::application
 {
-	void OverlayMediaController::initialize(std::string dbPath, int port)
+	void OverlayMediaController::initialize(const OverlayMediaControllerConfig& config)
 	{
 		std::cout 
 			<< APP_NAME << " v" << APP_VERSION << " (" << APP_CHANNEL << ")\n"
-			<< "Database: " << dbPath << "\n"
-			<< "Port: " << port << "\n";
+			<< "Database: " << config.dbPath << "\n"
+			<< "Port: " << config.port << "\n";
 
 		omc::shared::ThreadPool threadPool(std::thread::hardware_concurrency());
 
@@ -25,8 +25,8 @@ namespace omc::application
 		});
 
 		std::string dbError;
-		if (!mediaRepository->setupDatabase(dbPath, dbError)) {
-			std::cerr << "Failed to setup database: " << dbPath << "\n";
+		if (!mediaRepository->setupDatabase(config.dbPath, dbError)) {
+			std::cerr << "Failed to setup database: " << config.dbPath << "\n";
 			std::cerr << "Error: " << dbError << "\n";
 			return;
 		}
@@ -35,16 +35,23 @@ namespace omc::application
 		uiManager.init(&threadPool);
 
 		apiServer = std::make_unique<omc::server::ApiServer>();
-		apiThread = std::thread([this, port]() {
-			apiServer->start(port, eventBus, *mediaService, *uiService);
+		apiThread = std::thread([this, config]() {
+			apiServer->start(config.port, eventBus, *mediaService, *uiService);
 		});
 
-		std::cout << "Listening on: http://127.0.0.1:" << port << "\n";
+		std::cout << "Listening on: http://127.0.0.1:" << config.port << "\n";
+
+		if (!config.skipUpdates && updater.checkForUpdates()) {
+			std::cout << "Update available! Downloading and installing...\n";
+			updater.downloadAndInstallUpdates();
+		}
 
 		running = true;
 		while (running) {
 			// Process events in thread-safe manner
 			eventBus.processQueue();
+
+			if (!running) break;
 
 			// Update and render UI
 			uiManager.update();

@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 
     std::string db_path;
     int port;
-	bool cleanup = false;
+	bool skip_updates = false;
 
     app.add_option("--db-path", db_path, "Path to the SQLite database")
         ->envname("OMC_DB_PATH")
@@ -21,19 +21,18 @@ int main(int argc, char* argv[])
         ->envname("OMC_PORT")
         ->default_val(8080);
 
-    app.add_flag("--cleanup", cleanup, "Clean up old files on startup");
+    app.add_flag("--skip-updates", skip_updates, "Skip update checks on startup");
 
     // Parse CLI arguments and automatically handle errors / --help
     CLI11_PARSE(app, argc, argv);
 
-    if (cleanup)
-    {
-        
-    }
-
     // Start the application with the validated configuration
     omc::application::OverlayMediaController controller;
-    controller.initialize(db_path.c_str(), port);
+    omc::application::OverlayMediaControllerConfig config;
+    config.dbPath = db_path;
+    config.port = port;
+    config.skipUpdates = skip_updates;
+    controller.initialize(config);
 
     return 0;
 }
