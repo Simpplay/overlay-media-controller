@@ -13,6 +13,8 @@
 #include "modules/media/infrastructure/SqliteMediaRepository.hpp"
 #include "modules/media/application/MediaService.hpp"
 
+#include "modules/soundboard/application/SoundBoardService.hpp"
+
 #include "modules/server/runtime/ApiServer.hpp"
 
 namespace omc::application
@@ -47,6 +49,8 @@ namespace omc::application
 		std::unique_ptr<omc::media::MediaManager> mediaManager = std::make_unique<omc::media::MediaManager>();
 		std::shared_ptr<omc::media::SqliteMediaRepository> mediaRepository = std::make_shared<omc::media::SqliteMediaRepository>("./media-storage", "./media-storage/thumbnails");
 		std::shared_ptr<omc::media::MediaService> mediaService = std::make_shared<omc::media::MediaService>(mediaRepository);
+
+		std::unique_ptr<omc::soundboard::SoundBoardService> soundboardService = std::make_unique<omc::soundboard::SoundBoardService>();
 
 		std::unique_ptr<omc::server::ApiServer> apiServer;
 

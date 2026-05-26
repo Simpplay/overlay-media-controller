@@ -36,7 +36,7 @@ namespace omc::application
 
 		apiServer = std::make_unique<omc::server::ApiServer>();
 		apiThread = std::thread([this, config]() {
-			apiServer->start(config.port, eventBus, *mediaService, *uiService);
+			apiServer->start(config.port, eventBus, *mediaService, *uiService, *soundboardService);
 		});
 
 		std::cout << "Listening on: http://127.0.0.1:" << config.port << "\n";

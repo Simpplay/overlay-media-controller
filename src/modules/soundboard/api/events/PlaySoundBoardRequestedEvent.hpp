@@ -8,10 +8,12 @@
 namespace omc::event {
 	class PlaySoundBoardRequestedEvent : public Event {
 	public:
-		explicit PlaySoundBoardRequestedEvent(int media_id)
-			: id(media_id) {
+		explicit PlaySoundBoardRequestedEvent(int media_id, float volume, bool force)
+			: id(media_id), volume(volume), force(force) {
 		}
 
 		int id;
+		float volume;
+		bool force;
 	};
 }

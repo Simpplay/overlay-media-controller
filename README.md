@@ -631,6 +631,40 @@ DELETE /api/overlays/:id
 
 ---
 
+# Soundboard
+
+Soundboards are media that plays through a VB driver
+
+## Play Sound
+
+### Request
+
+```http
+POST /api/soundboard
+```
+
+### Request Body
+
+```json
+{
+    "media_id": 1,
+    "volume": 100.0,
+    "force": false
+}
+```
+
+### Response
+
+#### 201 Created
+
+```json
+{
+    "status": "shown"
+}
+```
+
+---
+
 # Project Structure
 
 ```txt

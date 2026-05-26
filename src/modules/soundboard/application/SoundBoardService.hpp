@@ -7,9 +7,7 @@ namespace omc::soundboard
 	class SoundBoardService : public ISoundBoardService
 	{
 	public:
-		SoundBoardService() = default;
-		~SoundBoardService() override = default;
-		
-
+		SoundBoardService();
+		~SoundBoardService();
 	};
 }

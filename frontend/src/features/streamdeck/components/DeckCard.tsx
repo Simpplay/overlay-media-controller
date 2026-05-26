@@ -6,15 +6,16 @@ interface Props {
   media: Media
   overlay: Overlay | undefined
   isPending: boolean
-  onTap: (mediaId: number) => void
+  onTap: (mediaId: number, isSoundboard: boolean) => void
   onToggleFullscreen: (overlay: Overlay) => void
   onClose: (overlayId: number) => void
+  isSoundboard: boolean
 }
 
 const LONG_PRESS_MS = 500
 
 export const DeckCard = memo(function DeckCard({
-  media, overlay, isPending, onTap, onToggleFullscreen, onClose,
+  media, overlay, isPending, onTap, onToggleFullscreen, onClose, isSoundboard
 }: Props) {
   const [showActions, setShowActions] = useState(false)
   const [imgFailed, setImgFailed] = useState(false)
@@ -40,7 +41,7 @@ export const DeckCard = memo(function DeckCard({
   const handleClick = useCallback(() => {
     cancelTimer()
     if (didLongPress.current) return
-    if (!showActions) onTap(media.id)
+    if (!showActions) onTap(media.id, isSoundboard)
   }, [cancelTimer, showActions, media.id, onTap])
 
   const closeActions = useCallback((e: React.MouseEvent) => {

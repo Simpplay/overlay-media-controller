@@ -1,14 +1,17 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useMediaList } from '@/hooks/useMedia'
 import { useOverlayList, useCreateOverlay, useUpdateOverlay, useDeleteOverlay } from '@/hooks/useOverlays'
+import { usePlaySoundboard } from '@/hooks/useSoundboard'
 import { useCategoryList } from '@/hooks/useCategories'
 import { CategoryFilter } from './components/CategoryFilter'
+import { SoundboardToggle } from './components/SoundboardToggle'
 import { DeckCard } from './components/DeckCard'
 import type { Overlay } from '@/types'
 import { LayoutGrid } from 'lucide-react'
 
 export function StreamDeckPage() {
   const [activeCategory, setActiveCategory] = useState<number | null>(null)
+  const [soundboardActive, setSoundboardActive] = useState<boolean>(false)
   const [pendingIds, setPendingIds] = useState<Set<number>>(new Set())
 
   const { data: media = [], isLoading: mediaLoading } = useMediaList()
@@ -19,10 +22,21 @@ export function StreamDeckPage() {
   const updateOverlay = useUpdateOverlay()
   const deleteOverlay = useDeleteOverlay()
 
+  const playSoundboard = usePlaySoundboard()
+
   const filteredMedia = useMemo(() => {
-    if (!activeCategory) return media
-    return media.filter((m) => m.categories?.includes(activeCategory))
-  }, [media, activeCategory])
+    let filtered = media
+    if (activeCategory) {
+      filtered = media.filter((m) => m.categories?.includes(activeCategory))
+    }
+
+    if (soundboardActive) {
+      console.log('Filtering soundboard media') 
+      filtered = filtered.filter((m) => (m.contentType)?.startsWith("audio/"))
+    }
+
+    return filtered
+  }, [media, activeCategory, soundboardActive])
 
   const overlayByMediaId = useMemo(() => {
     const map = new Map<number, Overlay>()
@@ -30,25 +44,53 @@ export function StreamDeckPage() {
     return map
   }, [overlays])
 
-  const handleTap = useCallback((mediaId: number) => {
+  const handleCreateOverlay = useCallback((mediaId: number) => {
     if (pendingIds.has(mediaId)) return
-    setPendingIds(prev => new Set(prev).add(mediaId))
-    createOverlay.mutate(
-      {
-        media_id: mediaId,
-        fullscreen: false,
-        position: { x: 100, y: 100 },
-        size: { width: 800, height: 600 },
-      },
-      {
-        onSettled: () =>
-          setPendingIds(prev => {
-            const s = new Set(prev)
-            s.delete(mediaId)
-            return s
-          }),
-      }
-    )
+        setPendingIds(prev => new Set(prev).add(mediaId))
+        createOverlay.mutate(
+          {
+            media_id: mediaId,
+            fullscreen: false,
+            position: { x: 100, y: 100 },
+            size: { width: 800, height: 600 },
+          },
+          {
+            onSettled: () =>
+              setPendingIds(prev => {
+                const s = new Set(prev)
+                s.delete(mediaId)
+                return s
+              }),
+          }
+        )
+  }, [pendingIds, createOverlay])
+
+  const handlePlaySoundboard = useCallback((mediaId: number) => {
+    if (pendingIds.has(mediaId)) return
+        setPendingIds(prev => new Set(prev).add(mediaId))
+        playSoundboard.mutate(
+          {
+            media_id: mediaId,
+            volume: 100,
+            force: false,
+          },
+          {
+            onSettled: () =>
+              setPendingIds(prev => {
+                const s = new Set(prev)
+                s.delete(mediaId)
+                return s
+              }),
+          }
+        )
+  }, [pendingIds, playSoundboard])
+
+  const handleTap = useCallback((mediaId: number, isSoundboard: boolean) => {
+    if (isSoundboard) {
+      return handlePlaySoundboard(mediaId)
+    }
+
+    return handleCreateOverlay(mediaId)
   }, [pendingIds, createOverlay])
 
   const handleToggleFullscreen = useCallback((overlay: Overlay) => {
@@ -77,6 +119,10 @@ export function StreamDeckPage() {
           active={activeCategory}
           onSelect={setActiveCategory}
         />
+        <SoundboardToggle
+          active={soundboardActive}
+          onSelect={setSoundboardActive} 
+        />
       </div>
 
       {/* Grid */}
@@ -103,6 +149,7 @@ export function StreamDeckPage() {
                 onTap={handleTap}
                 onToggleFullscreen={handleToggleFullscreen}
                 onClose={handleClose}
+                isSoundboard={soundboardActive}
               />
             ))}
           </div>
