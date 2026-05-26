@@ -19,5 +19,7 @@ namespace omc::server
 
 	private:
 		void handlePlaySound(const httplib::Request& req, httplib::Response& res);
+		void handleGetAudioDevices(const httplib::Request& req, httplib::Response& res);
+		void handleSetAudioDevice(const httplib::Request& req, httplib::Response& res);
 	};
 }

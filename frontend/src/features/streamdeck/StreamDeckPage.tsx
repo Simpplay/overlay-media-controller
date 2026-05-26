@@ -5,6 +5,7 @@ import { usePlaySoundboard } from '@/hooks/useSoundboard'
 import { useCategoryList } from '@/hooks/useCategories'
 import { CategoryFilter } from './components/CategoryFilter'
 import { SoundboardToggle } from './components/SoundboardToggle'
+import { SoundboardDeviceSelect } from './components/SoundboardDeviceSelect' // <-- Import here
 import { DeckCard } from './components/DeckCard'
 import type { Overlay } from '@/types'
 import { LayoutGrid } from 'lucide-react'
@@ -105,23 +106,34 @@ export function StreamDeckPage() {
     <div className="-mx-4 sm:-mx-6 -my-6">
       {/* Header */}
       <div className="px-4 sm:px-6 pt-5 pb-3 border-b border-zinc-800/50">
-        <div className="flex items-center gap-2 mb-3">
-          <LayoutGrid className="w-5 h-5 text-violet-400" />
-          <h1 className="text-base font-bold text-zinc-100 tracking-tight">StreamDeck</h1>
-          {overlays.length > 0 && (
-            <span className="ml-auto text-xs text-violet-400 font-semibold">
-              {overlays.length} live
-            </span>
-          )}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <LayoutGrid className="w-5 h-5 text-violet-400" />
+            <h1 className="text-base font-bold text-zinc-100 tracking-tight">StreamDeck</h1>
+            {overlays.length > 0 && (
+              <span className="ml-2 text-xs text-violet-400 font-semibold bg-violet-400/10 px-2 py-0.5 rounded-full">
+                {overlays.length} live
+              </span>
+            )}
+          </div>
+
+          {/* Controls Group */}
+          <div className="flex items-center gap-4">
+            {/* Show device selector only when soundboard is active, or remove condition to always show */}
+            {soundboardActive && <SoundboardDeviceSelect />}
+            
+            <SoundboardToggle
+              active={soundboardActive}
+              onSelect={setSoundboardActive} 
+            />
+          </div>
         </div>
+
+        {/* Bottom Row: Category Filters */}
         <CategoryFilter
           categories={categories}
           active={activeCategory}
           onSelect={setActiveCategory}
-        />
-        <SoundboardToggle
-          active={soundboardActive}
-          onSelect={setSoundboardActive} 
         />
       </div>
 

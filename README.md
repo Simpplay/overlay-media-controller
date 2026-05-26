@@ -74,6 +74,14 @@ OMC_PORT=9090 \
 
 ---
 
+## Running the Soundboard
+
+In order to play audio through the microphone you need to install a virtual audio driver.
+I recommend the use of [VB-CABLE Virtual Audio Device](https://vb-audio.com/Cable/).
+Then, you have to choose the CABLE input in the settings.
+
+---
+
 # API Reference
 
 All responses use:
@@ -662,6 +670,53 @@ POST /api/soundboard
     "status": "shown"
 }
 ```
+
+---
+
+## Get input devices
+
+### Request
+
+```http
+GET /api/soundboard/devices
+```
+
+### Response
+
+#### 200 OK
+
+```json
+[
+    {
+        "device_id": 123456789,
+        "name": CABLE Input,
+        "selected": false
+    },
+    ...
+]
+```
+
+---
+
+## Set input device
+
+### Request
+
+```http
+PUT /api/soundboard/devices
+```
+
+### Request Body
+
+```json
+{
+    "device_id": 123456789,
+}
+```
+
+### Response
+
+#### 200 OK
 
 ---
 

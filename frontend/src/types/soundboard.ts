@@ -13,3 +13,13 @@ export interface PlaySoundboardPayload {
 export interface PlaySoundboardResponse {
   state: string
 }
+
+export interface SoundboardDevice {
+  device_id: number,
+  name: string,
+  selected: boolean
+}
+
+export interface SetSoundboardPayload {
+  device_id: number
+}

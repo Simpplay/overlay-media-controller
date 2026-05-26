@@ -1,6 +1,7 @@
 add_library(soundboard
     "api/ISoundboardService.hpp"
     "api/events/PlaySoundBoardRequestedEvent.hpp"
+    "api/SoundboardDto.hpp"
 
     "application/SoundboardService.hpp"
     "application/SoundboardService.cpp"

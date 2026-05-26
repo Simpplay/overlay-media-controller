@@ -9,5 +9,8 @@ namespace omc::soundboard
 	public:
 		SoundBoardService();
 		~SoundBoardService();
+
+		std::vector<SoundboardDeviceDto> getAudioDevices() const override;
+		bool setAudioDevice(SetInputDeviceDto& deviceId) override;
 	};
 }
