@@ -41,9 +41,15 @@ namespace omc::application
 
 		std::cout << "Listening on: http://127.0.0.1:" << config.port << "\n";
 
-		if (!config.skipUpdates && updater.checkForUpdates()) {
-			std::cout << "Update available! Downloading and installing...\n";
-			updater.downloadAndInstallUpdates();
+		if (!config.skipUpdates) {
+			std::cout << "Checking for updates...\n";
+			if (updater.checkForUpdates()) {
+				std::cout << "Update available! Downloading and installing...\n";
+				updater.downloadAndInstallUpdates();
+			}
+			else {
+				std::cout << "You are up to date!.\n";
+			}
 		}
 
 		running = true;

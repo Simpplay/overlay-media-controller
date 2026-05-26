@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <cstdint>
+
 #include "core/event/api/Event.hpp"
 
 namespace omc::event {
