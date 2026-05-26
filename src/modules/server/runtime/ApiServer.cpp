@@ -27,6 +27,10 @@ namespace omc::server
 				res.status = 204;
 			});
 
+			server.Get("/health", [this](const httplib::Request& req, httplib::Response& res) {
+				res.set_content("{\"status\":\"ok\"}", "application/json");
+			});
+
 			// Cada módulo registra sus rutas
 			for (auto& module : modules) {
 				module->registerRoutes(server);
