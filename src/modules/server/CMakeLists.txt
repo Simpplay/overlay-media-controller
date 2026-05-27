@@ -9,6 +9,8 @@ add_library(server
     "application/CategoriesApiModule.cpp"
     "application/OverlaysApiModule.hpp"
     "application/OverlaysApiModule.cpp"
+    "application/SoundboardApiModule.hpp"
+    "application/SoundboardApiModule.cpp"
 
     "api/IApiModule.hpp"
   )

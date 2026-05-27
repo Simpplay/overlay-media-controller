@@ -25,8 +25,6 @@ namespace omc::application
 
 	bool Updater::checkForUpdates()
 	{
-		std::cout << "Checking for updates...\n";
-
 		auto res = cli.Get(LAST_RELEASE_URL, headers);
 		if (!res)
 		{

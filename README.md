@@ -74,6 +74,21 @@ OMC_PORT=9090 \
 
 ---
 
+## Running the Soundboard
+
+In order to play audio through the microphone you need to install a virtual audio driver.
+I recommend the use of [VB-CABLE Virtual Audio Device](https://vb-audio.com/Cable/).
+Then, you have to choose the CABLE input in the settings.
+
+### Ffmpeg
+
+You also need Ffmpeg to read all the audio files. You can download via Powershell running:
+```Powershell
+winget install Gyan.FFmpeg
+```
+
+---
+
 # API Reference
 
 All responses use:
@@ -628,6 +643,87 @@ DELETE /api/overlays/:id
 ### Response
 
 #### 204 No Content
+
+---
+
+# Soundboard
+
+Soundboards are media that plays through a VB driver
+
+## Play Sound
+
+### Request
+
+```http
+POST /api/soundboard
+```
+
+### Request Body
+
+```json
+{
+    "media_id": 1,
+    "volume": 100.0,
+    "force": false
+}
+```
+
+### Response
+
+#### 201 Created
+
+```json
+{
+    "status": "shown"
+}
+```
+
+---
+
+## Get input devices
+
+### Request
+
+```http
+GET /api/soundboard/devices
+```
+
+### Response
+
+#### 200 OK
+
+```json
+[
+    {
+        "device_id": 123456789,
+        "name": CABLE Input,
+        "selected": false
+    },
+    ...
+]
+```
+
+---
+
+## Set input device
+
+### Request
+
+```http
+PUT /api/soundboard/devices
+```
+
+### Request Body
+
+```json
+{
+    "device_id": 123456789,
+}
+```
+
+### Response
+
+#### 200 OK
 
 ---
 
