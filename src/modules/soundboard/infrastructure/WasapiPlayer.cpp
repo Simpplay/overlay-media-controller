@@ -79,6 +79,7 @@ namespace omc::soundboard
 
     std::vector<AudioDevice> WasapiPlayer::getAllAudioDevices()
     {
+        // Ensure COM is initialized for this thread (e.g. if called from API thread)
         std::vector<AudioDevice> devices;
         ComPtr<IMMDeviceEnumerator> enumerator;
 
