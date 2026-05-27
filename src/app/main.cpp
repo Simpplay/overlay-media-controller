@@ -7,6 +7,11 @@
 
 int main(int argc, char* argv[])
 {
+    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    if (FAILED(hr)) {
+        return 1;
+    }
+
     CLI::App app{ "Overlay Media Controller" };
 
     std::string db_path;
@@ -34,5 +39,6 @@ int main(int argc, char* argv[])
     config.skipUpdates = skip_updates;
     controller.initialize(config);
 
+    CoUninitialize();
     return 0;
 }

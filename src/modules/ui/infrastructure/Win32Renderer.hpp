@@ -37,6 +37,9 @@ namespace omc::infra
         void update();
         void render(const std::vector<omc::ui::DrawCommand>& drawCommands);
 
+		bool HideProgramWindow();
+		bool ShowProgramWindow();
+
         struct Impl;
 
     private:

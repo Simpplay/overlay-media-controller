@@ -67,28 +67,33 @@ namespace omc::soundboard
     WasapiPlayer::WasapiPlayer()
         : selectedDeviceId(-1), isPlaying(false), ringBuffer(48000 * 2 * 4 * 2) // 2 seconds of buffer
     {
-        CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     }
 
     WasapiPlayer::~WasapiPlayer()
     {
         isPlaying = false;
         ringBuffer.setDone(true);
-        CoUninitialize();
     }
 
     std::vector<AudioDevice> WasapiPlayer::getAllAudioDevices()
     {
-        // Ensure COM is initialized for this thread (e.g. if called from API thread)
+        HRESULT hr_com = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+
         std::vector<AudioDevice> devices;
         ComPtr<IMMDeviceEnumerator> enumerator;
 
         if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, IID_PPV_ARGS(&enumerator))))
+        {
+            if (SUCCEEDED(hr_com)) CoUninitialize();
             return devices;
+        }
 
         ComPtr<IMMDeviceCollection> collection;
         if (FAILED(enumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &collection)))
+        {
+            if (SUCCEEDED(hr_com)) CoUninitialize();
             return devices;
+        }
 
         UINT count = 0;
         collection->GetCount(&count);
@@ -110,6 +115,7 @@ namespace omc::soundboard
             PropVariantClear(&name);
         }
 
+        if (SUCCEEDED(hr_com)) CoUninitialize();
         return devices;
     }
 

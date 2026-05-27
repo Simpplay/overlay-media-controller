@@ -45,8 +45,8 @@ export function Sidebar() {
       >
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-5 py-5 border-b border-zinc-800/50">
-          <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
-            <Layers className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+            <img src="/favicon.svg" alt="Company Logo"></img>
           </div>
           <div>
             <p className="text-sm font-bold text-zinc-100 leading-tight">OMC</p>

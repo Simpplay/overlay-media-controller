@@ -7,6 +7,7 @@
 #include "MediaApiModule.hpp"
 #include "OverlaysApiModule.hpp"
 #include "SoundboardApiModule.hpp"
+#include "modules/server/api/events/ServerStartedEvent.hpp"
 
 
 namespace omc::server
@@ -69,6 +70,9 @@ namespace omc::server
 
 		impl_ = std::make_unique<Impl>();
 		impl_->init(eventBus, mediaService, uiService, soundboardService);
+
+		eventBus.post(std::make_unique<omc::event::ServerStartedEvent>(port));
+
 		impl_->listen(port);
 	}
 

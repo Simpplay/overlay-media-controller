@@ -3,6 +3,9 @@ add_library(event
     "api/EventBus.hpp"
     "api/events/ExitApplicationRequestedEvent.hpp"
     "api/EventBus.cpp"
+
+    "api/events/ApplicationHideRequestedEvent.hpp"
+    "api/events/ApplicationShowRequestedEvent.hpp"
 )
 
 target_include_directories(event 

@@ -29,4 +29,14 @@ namespace omc::ui
 		window->setZBase(MAX_Z_INDEX_PER_WINDOW + uiRepository->getWindowCount() * MAX_Z_INDEX_PER_WINDOW);
 		uiRepository->addWindow(std::move(window));
 	}
+
+	void UiManager::handleHideApplicationRequestedEvent(const omc::event::ApplicationHideRequestedEvent& event)
+	{
+		renderer.HideProgramWindow();
+	}
+
+	void UiManager::handleShowApplicationRequestedEvent(const omc::event::ApplicationShowRequestedEvent& event)
+	{
+		renderer.ShowProgramWindow();
+	}
 }

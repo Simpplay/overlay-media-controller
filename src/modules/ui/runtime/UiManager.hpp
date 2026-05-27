@@ -16,6 +16,9 @@
 #include "modules/ui/application/windows/TestWindow.hpp"
 #include "modules/ui/application/windows/WebViewWindow.hpp"
 
+#include "core/event/api/events/ApplicationHideRequestedEvent.hpp"
+#include "core/event/api/events/ApplicationShowRequestedEvent.hpp"
+
 namespace omc::ui
 {
 	class UiManager
@@ -25,6 +28,14 @@ namespace omc::ui
 		{
 			eventBus.subscribe<omc::event::WindowOpenRequestedEvent>([this](const omc::event::WindowOpenRequestedEvent& event) {
 				handleWindowOpenRequestedEvent(event);
+			});
+
+			eventBus.subscribe<omc::event::ApplicationHideRequestedEvent>([this](const omc::event::ApplicationHideRequestedEvent& event) {
+				handleHideApplicationRequestedEvent(event);
+			});
+
+			eventBus.subscribe<omc::event::ApplicationShowRequestedEvent>([this](const omc::event::ApplicationShowRequestedEvent& event) {
+				handleShowApplicationRequestedEvent(event);
 			});
 
 			printf("UiManager initialized..\n");
@@ -41,6 +52,9 @@ namespace omc::ui
 
 	private:
 		void handleWindowOpenRequestedEvent(const omc::event::WindowOpenRequestedEvent& event);
+		void handleHideApplicationRequestedEvent(const omc::event::ApplicationHideRequestedEvent& event);
+		void handleShowApplicationRequestedEvent(const omc::event::ApplicationShowRequestedEvent& event);
+
 		std::shared_ptr<UiRepository> uiRepository;
 
 		omc::shared::ThreadPool* threadPool{ nullptr };

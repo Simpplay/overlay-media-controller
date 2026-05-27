@@ -7,6 +7,11 @@
 #include <unordered_set>
 
 #include "WebViewRenderer.hpp"
+#include "app/resources.h"
+#include <shellapi.h>
+#include "modules/server/api/events/ServerStartedEvent.hpp"
+#include "modules/ui/application/windows/WebViewWindow.hpp"
+#include "modules/ui/api/events/WindowOpenRequestedEvent.hpp"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -14,6 +19,10 @@
 #pragma comment(lib, "dcomp.lib")
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "dwrite.lib")
+#pragma comment(lib, "shell32.lib")
+
+#define WM_TRAYICON (WM_USER + 1)
+#define ID_TRAYICON 1
 
 namespace omc::infra
 {
@@ -83,6 +92,9 @@ namespace omc::infra
     };
 
     struct Win32Renderer::Impl {
+		omc::event::EventBus* eventBus = nullptr;
+		int port = 0;
+
         HWND g_hwnd = nullptr;
 
         ID3D11Device* g_device = nullptr;
@@ -140,6 +152,49 @@ namespace omc::infra
         switch (msg) {
         case WM_DESTROY:  PostQuitMessage(0); return 0;
         case WM_NCHITTEST: return HTCLIENT;
+        case WM_TRAYICON:
+            if (lParam == WM_LBUTTONUP) {
+                HWND consoleWnd = GetConsoleWindow();
+                if (consoleWnd) {
+                    if (IsWindowVisible(consoleWnd)) {
+                        ShowWindow(consoleWnd, SW_HIDE);
+                    }
+                    else {
+                        ShowWindow(consoleWnd, SW_SHOW);
+                        SetForegroundWindow(consoleWnd);
+                    }
+                }
+            }
+            else if (lParam == WM_RBUTTONUP) {
+                HMENU hMenu = CreatePopupMenu();
+                if (hMenu) {
+                    AppendMenuA(hMenu, MF_STRING, 1001, "Abrir");
+                    AppendMenuA(hMenu, MF_SEPARATOR, 0, NULL);
+                    AppendMenuA(hMenu, MF_STRING, 1002, "Salir");
+
+                    POINT pt;
+                    GetCursorPos(&pt);
+                    SetForegroundWindow(hwnd);
+                    TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, pt.x, pt.y, 0, hwnd, NULL);
+                    DestroyMenu(hMenu);
+                }
+            }
+            return 0;
+
+        case WM_COMMAND:
+            if (self && self->eventBus) {
+                int wmId = LOWORD(wParam);
+                if (wmId == 1001) { // Abrir
+                    std::string url = "http://localhost:" + std::to_string(self->port);
+                    self->eventBus->post(std::make_unique<omc::event::WindowOpenRequestedEvent>(
+                        std::make_unique<omc::ui::window::WebViewWindow>(url)
+                    ));
+                }
+                else if (wmId == 1002) { // Salir
+                    self->eventBus->post(std::make_unique<omc::event::ExitApplicationRequestedEvent>());
+                }
+            }
+            return 0;
         }
         return DefWindowProc(hwnd, msg, wParam, lParam);
     }
@@ -150,12 +205,30 @@ namespace omc::infra
     Win32Renderer::Win32Renderer(omc::event::EventBus& eventBus)
         : eventBus(eventBus), m_pimpl(std::make_unique<Impl>())
     {
+        m_pimpl->eventBus = &eventBus;
         eventBus.subscribe<omc::event::ExitApplicationRequestedEvent>([this](const auto& e) {
             onExit(e);
-            });
+        });
+
+        eventBus.subscribe<omc::event::ServerStartedEvent>([this](const omc::event::ServerStartedEvent& e) {
+            m_pimpl->port = e.port;
+        });
     }
 
     Win32Renderer::~Win32Renderer() = default;
+
+    // 
+    bool Win32Renderer::HideProgramWindow() 
+    {
+		auto result = ShowWindow(GetConsoleWindow(), SW_HIDE);
+		return result != 0;
+    }
+
+    bool Win32Renderer::ShowProgramWindow() 
+    {
+        auto result = ShowWindow(GetConsoleWindow(), SW_SHOW);
+        return result != 0;
+    }
 
     // =========================================================
     // Helpers de vértices
@@ -471,6 +544,7 @@ namespace omc::infra
         wc.lpfnWndProc = WndProc;
         wc.hInstance = GetModuleHandle(nullptr);
         wc.lpszClassName = "OMCOverlayClass";
+        wc.hIcon = LoadIcon(wc.hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
         RegisterClass(&wc);
 
         m_pimpl->g_hwnd = CreateWindowEx(
@@ -482,6 +556,17 @@ namespace omc::infra
 
         if (!m_pimpl->g_hwnd) return false;
         SetWindowLongPtr(m_pimpl->g_hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(m_pimpl.get()));
+
+        // Tray Icon
+        NOTIFYICONDATAA nid = { sizeof(nid) };
+        nid.hWnd = m_pimpl->g_hwnd;
+        nid.uID = ID_TRAYICON;
+        nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+        nid.uCallbackMessage = WM_TRAYICON;
+        nid.hIcon = LoadIcon(wc.hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
+        strcpy_s(nid.szTip, "Overlay Media Controller");
+        Shell_NotifyIconA(NIM_ADD, &nid);
+
         ShowWindow(m_pimpl->g_hwnd, SW_SHOW);
         return true;
     }
@@ -867,6 +952,11 @@ namespace omc::infra
 
         CleanupD3D();
         if (m_pimpl->g_hwnd) {
+            NOTIFYICONDATAA nid = { sizeof(nid) };
+            nid.hWnd = m_pimpl->g_hwnd;
+            nid.uID = ID_TRAYICON;
+            Shell_NotifyIconA(NIM_DELETE, &nid);
+
             DestroyWindow(m_pimpl->g_hwnd);
             m_pimpl->g_hwnd = nullptr;
         }

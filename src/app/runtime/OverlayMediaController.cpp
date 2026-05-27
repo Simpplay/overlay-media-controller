@@ -8,6 +8,8 @@
 #include "core/threading/api/ThreadPool.hpp"
 
 #include "core/event/api/events/ExitApplicationRequestedEvent.hpp"
+#include "core/event/api/events/ApplicationHideRequestedEvent.hpp"
+#include "core/event/api/events/ApplicationShowRequestedEvent.hpp"
 
 namespace omc::application
 {
@@ -52,6 +54,8 @@ namespace omc::application
 			}
 		}
 
+		eventBus.emit(omc::event::ApplicationHideRequestedEvent{});
+
 		running = true;
 		while (running) {
 			// Process events in thread-safe manner
@@ -63,8 +67,6 @@ namespace omc::application
 			uiManager.update();
 			uiManager.render();
 		}
-
-		CoUninitialize();
 	}
 
 	void OverlayMediaController::close()
