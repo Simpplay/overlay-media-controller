@@ -4,7 +4,6 @@
 #include "HttpUtils.hpp"
 
 #include "modules/soundboard/api/SoundboardDto.hpp"
-#include "modules/soundboard/api/events/PlaySoundBoardRequestedEvent.hpp"
 
 namespace omc::server
 {
@@ -33,8 +32,11 @@ namespace omc::server
 			const float volume = body.value("volume", 100.0f);
 			const bool  force  = body.value("force", false);
 
-			eventBus.post(std::make_unique<omc::event::PlaySoundBoardRequestedEvent>(id, volume, force));
-			res.set_content("{\"status\":\"shown\"}", "application/json");
+			bool result = soundboardService.playMedia(id);
+			if (result)
+				res.set_content("{\"status\":\"shown\"}", "application/json");
+			else
+				setError(res, httplib::StatusCode::InternalServerError_500, "Failed to play media");
 		}
 		catch (const nlohmann::json::exception& e) {
 			setError(res, httplib::StatusCode::BadRequest_400, e.what());

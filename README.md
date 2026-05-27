@@ -80,6 +80,13 @@ In order to play audio through the microphone you need to install a virtual audi
 I recommend the use of [VB-CABLE Virtual Audio Device](https://vb-audio.com/Cable/).
 Then, you have to choose the CABLE input in the settings.
 
+### Ffmpeg
+
+You also need Ffmpeg to read all the audio files. You can download via Powershell running:
+```Powershell
+winget install Gyan.FFmpeg
+```
+
 ---
 
 # API Reference

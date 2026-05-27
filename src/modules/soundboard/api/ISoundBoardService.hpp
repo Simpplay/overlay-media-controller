@@ -11,5 +11,7 @@ namespace omc::soundboard
 
 		virtual std::vector<SoundboardDeviceDto> getAudioDevices() const = 0;
 		virtual bool setAudioDevice(SetInputDeviceDto& deviceId) = 0;
+
+		virtual bool playMedia(int mediaId) = 0;
 	};
 }

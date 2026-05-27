@@ -1,12 +1,15 @@
 add_library(soundboard
     "api/ISoundboardService.hpp"
-    "api/events/PlaySoundBoardRequestedEvent.hpp"
     "api/SoundboardDto.hpp"
 
     "application/SoundboardService.hpp"
     "application/SoundboardService.cpp"
 
-    "runtime/SoundBoardManager.cpp"
+    "domain/ISoundboardPlayer.hpp"
+    "domain/AudioDevice.hpp"
+
+    "infrastructure/WasapiPlayer.hpp"
+    "infrastructure/WasapiPlayer.cpp"
 )
 
 target_include_directories(soundboard 
