@@ -36,6 +36,9 @@ namespace omc::application
 		void initialize(const OverlayMediaControllerConfig& config);
 		void close();
 
+		void toggleAutoStart(bool enable);
+		bool isAutoStartEnabled() const;
+
 	private:
 		bool running{ false };
 

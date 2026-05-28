@@ -1054,8 +1054,13 @@ namespace omc::media
 		thumbnailRoot_(std::filesystem::absolute(thumbnailRoot)),
 		thumbnailThreadPool_(std::make_unique<omc::shared::ThreadPool>(1))
 	{
-		std::filesystem::create_directories(mediaRoot_);
-		std::filesystem::create_directories(thumbnailRoot_);
+		std::error_code ec;
+		if (!std::filesystem::create_directories(mediaRoot_, ec) && ec) {
+			std::cerr << "Failed to create media root directory: " << mediaRoot_ << " Error: " << ec.message() << std::endl;
+		}
+		if (!std::filesystem::create_directories(thumbnailRoot_, ec) && ec) {
+			std::cerr << "Failed to create thumbnail root directory: " << thumbnailRoot_ << " Error: " << ec.message() << std::endl;
+		}
 	}
 
 	SqliteMediaRepository::~SqliteMediaRepository()
