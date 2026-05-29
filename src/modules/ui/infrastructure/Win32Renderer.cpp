@@ -123,7 +123,7 @@ namespace omc::infra
 
         HitTestManager g_hitTest;
 
-        std::unordered_map<int, std::unique_ptr<WebViewRenderer>> webViews;
+        std::unordered_map<int, std::shared_ptr<WebViewRenderer>> webViews;
         std::unordered_map<int, std::string>                      webViewUrls;
 
         int surfaceWidth = 0;
@@ -567,7 +567,6 @@ namespace omc::infra
         strcpy_s(nid.szTip, "Overlay Media Controller");
         Shell_NotifyIconA(NIM_ADD, &nid);
 
-        ShowWindow(m_pimpl->g_hwnd, SW_SHOW);
         return true;
     }
 
@@ -777,6 +776,8 @@ namespace omc::infra
             DispatchMessage(&msg);
         }
 
+        if (!IsWindowVisible(m_pimpl->g_hwnd)) return;
+
         POINT pt;
         GetCursorPos(&pt);
         ScreenToClient(m_pimpl->g_hwnd, &pt);
@@ -795,6 +796,20 @@ namespace omc::infra
     {
         const int sw = GetSystemMetrics(SM_CXSCREEN);
         const int sh = GetSystemMetrics(SM_CYSCREEN);
+
+        // Visibility handling
+        if (drawCommands.empty()) {
+            if (IsWindowVisible(m_pimpl->g_hwnd)) {
+                ShowWindow(m_pimpl->g_hwnd, SW_HIDE);
+            }
+            m_pimpl->g_hitTest.setRegions({});
+            return;
+        }
+        else {
+            if (!IsWindowVisible(m_pimpl->g_hwnd)) {
+                ShowWindow(m_pimpl->g_hwnd, SW_SHOWNOACTIVATE);
+            }
+        }
 
         ResizeSwapChainIfNeeded(*m_pimpl, sw, sh);
 
@@ -872,10 +887,10 @@ namespace omc::infra
 
             // First time we see this ID: create the renderer
             if (!wv) {
-                wv = std::make_unique<WebViewRenderer>();
+                wv = std::make_shared<WebViewRenderer>();
 
                 const std::string url = wvCmd.url;
-                WebViewRenderer* rawWv = wv.get();
+                std::weak_ptr<WebViewRenderer> weakWv = wv;
 
                 WebViewRenderer::InitParams p{};
                 p.parentHwnd = m_pimpl->g_hwnd;
@@ -887,10 +902,13 @@ namespace omc::infra
                     static_cast<LONG>(wvCmd.rect.position.x + wvCmd.rect.size.x),
                     static_cast<LONG>(wvCmd.rect.position.y + wvCmd.rect.size.y)
                 };
-                p.onReady = [rawWv, url](HRESULT hr) {
-                    if (SUCCEEDED(hr))
-                        rawWv->Navigate(std::wstring(url.begin(), url.end()));
-                    };
+                p.onReady = [weakWv, url](HRESULT hr) {
+                    if (SUCCEEDED(hr)) {
+                        if (auto wvPtr = weakWv.lock()) {
+                            wvPtr->Navigate(std::wstring(url.begin(), url.end()));
+                        }
+                    }
+                };
 
                 m_pimpl->webViewUrls[wvCmd.windowId] = url;
                 wv->Initialize(p);   // ← una sola vez, con el callback correcto

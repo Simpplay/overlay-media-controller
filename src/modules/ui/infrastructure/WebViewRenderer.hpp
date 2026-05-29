@@ -10,10 +10,11 @@
 
 #include <functional>
 #include <string>
+#include <memory>
 
 namespace omc::infra
 {
-    class WebViewRenderer
+    class WebViewRenderer : public std::enable_shared_from_this<WebViewRenderer>
     {
     public:
         struct InitParams {

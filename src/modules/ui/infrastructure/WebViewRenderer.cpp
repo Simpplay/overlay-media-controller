@@ -29,20 +29,25 @@ namespace omc::infra
         HRESULT hr = m_dcompDevice->CreateVisual(&m_webViewVisual);
         if (FAILED(hr)) return false;
 
+        auto weakThis = weak_from_this();
+
         hr = CreateCoreWebView2EnvironmentWithOptions(
             nullptr,
             params.userDataFolder.empty() ? nullptr : params.userDataFolder.c_str(),
             nullptr,
             Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
-                [this, onReady = params.onReady](HRESULT result, ICoreWebView2Environment* env) -> HRESULT {
+                [weakThis, onReady = params.onReady](HRESULT result, ICoreWebView2Environment* env) -> HRESULT {
+                    auto self = weakThis.lock();
+                    if (!self || self->m_shuttingDown) return E_ABORT;
+
                     if (FAILED(result) || !env) {
                         if (onReady) onReady(result);
                         return result;
                     }
 
-                    m_environment = env;
+                    self->m_environment = env;
                     ComPtr<ICoreWebView2Environment3> env3;
-                    HRESULT castHr = m_environment.As(&env3);
+                    HRESULT castHr = self->m_environment.As(&env3);
 
                     if (FAILED(castHr) || !env3) {
                         if (onReady) onReady(castHr);
@@ -50,34 +55,37 @@ namespace omc::infra
                     }
 
                     return env3->CreateCoreWebView2CompositionController(
-                        m_parentHwnd,
+                        self->m_parentHwnd,
                         Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2CompositionControllerCompletedHandler>(
-                            [this, onReady](HRESULT controllerResult, ICoreWebView2CompositionController* compositionController) -> HRESULT {
+                            [weakThis, onReady](HRESULT controllerResult, ICoreWebView2CompositionController* compositionController) -> HRESULT {
+                                auto self2 = weakThis.lock();
+                                if (!self2 || self2->m_shuttingDown) return E_ABORT;
+
                                 if (FAILED(controllerResult) || !compositionController) {
                                     if (onReady) onReady(controllerResult);
                                     return controllerResult;
                                 }
 
-                                m_compositionController = compositionController;
-                                m_compositionController.As(&m_controller);
+                                self2->m_compositionController = compositionController;
+                                self2->m_compositionController.As(&self2->m_controller);
 
-                                HRESULT webViewHr = m_controller->get_CoreWebView2(&m_webView);
+                                HRESULT webViewHr = self2->m_controller->get_CoreWebView2(&self2->m_webView);
                                 if (FAILED(webViewHr)) {
                                     if (onReady) onReady(webViewHr);
                                     return webViewHr;
                                 }
 
-                                webViewHr = m_compositionController->put_RootVisualTarget(m_webViewVisual.Get());
+                                webViewHr = self2->m_compositionController->put_RootVisualTarget(self2->m_webViewVisual.Get());
                                 if (FAILED(webViewHr)) {
                                     if (onReady) onReady(webViewHr);
                                     return webViewHr;
                                 }
 
-                                EnsureTransparentBackground();
-                                Resize(m_bounds);
-                                UpdateVisualTreeAttachment();
-                                m_controller->put_IsVisible(TRUE);
-                                m_initialized = true;
+                                self2->EnsureTransparentBackground();
+                                self2->Resize(self2->m_bounds);
+                                self2->UpdateVisualTreeAttachment();
+                                self2->m_controller->put_IsVisible(TRUE);
+                                self2->m_initialized = true;
 
                                 if (onReady) onReady(S_OK);
                                 return S_OK;
@@ -219,6 +227,14 @@ namespace omc::infra
         if (m_shuttingDown) return;
         m_shuttingDown = true;
 
+        if (m_controller) {
+            m_controller->put_IsVisible(FALSE);
+        }
+
+        if (m_webView) {
+            m_webView->Navigate(L"about:blank");
+        }
+
         RemoveVisualFromTree();
 
         if (m_compositionController) {
@@ -237,7 +253,6 @@ namespace omc::infra
         m_dcompDevice.Reset();
 
         m_initialized = false;
-        m_shuttingDown = false;
     }
 }
 

@@ -17,7 +17,19 @@ namespace omc::server
 		std::vector<std::unique_ptr<IApiModule>> modules;
 
 		void init(omc::event::EventBus& eb, omc::media::IMediaService& ms, omc::ui::IUiService& ui, omc::soundboard::ISoundBoardService& sb) {
-			server.set_base_dir("./web");
+			server.set_mount_point("/", "./web");
+
+			server.set_error_handler([](const httplib::Request& req, httplib::Response& res) {
+				std::ifstream file("./web/index.html");
+
+				if (file) {
+					std::stringstream buffer;
+					buffer << file.rdbuf();
+
+					res.set_content(buffer.str(), "text/html");
+					res.status = 200;
+				}
+			});
 
 			// Registramos los módulos
 			modules.push_back(std::make_unique<CategoriesApiModule>(eb, ms));
