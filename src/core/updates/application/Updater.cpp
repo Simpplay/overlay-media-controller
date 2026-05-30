@@ -311,22 +311,49 @@ namespace omc::application
 	{
 		DWORD pid = GetCurrentProcessId();
 
-		auto program_path = getExecutablePath().parent_path();
+		auto exePath = getExecutablePath();
+		auto program_path = exePath.parent_path();
+		auto exeName = exePath.filename().string();
 		auto extractDir = updateDir.value() / extractedDirName;
 
 		std::filesystem::path updatePath = extractDir;
 
 		if (std::filesystem::exists(extractDir) && std::filesystem::is_directory(extractDir)) {
+			int dirCount = 0;
+			int fileCount = 0;
+			std::filesystem::path subDir;
 			for (const auto& entry : std::filesystem::directory_iterator(extractDir)) {
 				if (entry.is_directory()) {
-					updatePath = entry.path();
+					subDir = entry.path();
+					dirCount++;
 				}
+				else {
+					fileCount++;
+				}
+			}
+
+			// If there's exactly one directory and no files, it's likely a nested root folder
+			if (dirCount == 1 && fileCount == 0) {
+				updatePath = subDir;
 			}
 		}
 
+		// Copy updater.exe to a temporary location to avoid locking itself during update
+		auto originalUpdaterPath = program_path / "updater.exe";
+		auto tempUpdaterPath = updateDir.value() / "updater_internal.exe";
+
+		std::error_code ec;
+		if (std::filesystem::exists(originalUpdaterPath)) {
+			std::filesystem::copy_file(originalUpdaterPath, tempUpdaterPath, std::filesystem::copy_options::overwrite_existing, ec);
+		}
+
+		std::filesystem::path updaterToRun = ec ? originalUpdaterPath : tempUpdaterPath;
+
 		std::string command =
-			"updater.exe --pid " + std::to_string(pid) +
+			"\"" + updaterToRun.string() + "\"" +
+			" --pid " + std::to_string(pid) +
 			" --program \"" + program_path.string() + "\"" +
+			" --executable \"" + exeName + "\"" +
 			" --update \"" + updatePath.string() + "\"";
 
 		STARTUPINFOA si{};
@@ -334,18 +361,20 @@ namespace omc::application
 
 		PROCESS_INFORMATION pi{};
 
-		CreateProcessA(
+		if (!CreateProcessA(
 			nullptr,
 			command.data(),
 			nullptr,
 			nullptr,
 			FALSE,
-			0,
+			CREATE_NO_WINDOW | DETACHED_PROCESS,
 			nullptr,
 			nullptr,
 			&si,
 			&pi
-		);
+		)) {
+			return false;
+		}
 
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);

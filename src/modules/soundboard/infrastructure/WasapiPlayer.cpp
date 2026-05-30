@@ -155,22 +155,51 @@ namespace omc::soundboard
     void WasapiPlayer::producerTask(const std::string& filepath)
     {
         std::string command = "ffmpeg -i \"" + filepath + "\" -f f32le -ar 48000 -ac 2 -loglevel error -";
-        FILE* pipe = _popen(command.c_str(), "rb");
-        if (!pipe)
+        
+        HANDLE hRead, hWrite;
+        SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
+        if (!CreatePipe(&hRead, &hWrite, &sa, 0))
         {
             ringBuffer.setDone(true);
             return;
         }
 
+        SetHandleInformation(hRead, HANDLE_FLAG_INHERIT, 0);
+
+        STARTUPINFOA si = { sizeof(STARTUPINFOA) };
+        si.dwFlags = STARTF_USESTDHANDLES;
+        si.hStdOutput = hWrite;
+        si.hStdError = NULL;
+        si.hStdInput = NULL;
+
+        PROCESS_INFORMATION pi = { 0 };
+        std::vector<char> commandLine(command.begin(), command.end());
+        commandLine.push_back('\0');
+
+        if (!CreateProcessA(NULL, commandLine.data(), NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+        {
+            CloseHandle(hRead);
+            CloseHandle(hWrite);
+            ringBuffer.setDone(true);
+            return;
+        }
+
+        CloseHandle(hWrite);
+
         char buffer[1024];
+        DWORD bytesRead;
         while (isPlaying)
         {
-            size_t bytesRead = fread(buffer, 1, sizeof(buffer), pipe);
-            if (bytesRead <= 0) break;
+            if (!ReadFile(hRead, buffer, sizeof(buffer), &bytesRead, NULL) || bytesRead == 0)
+                break;
             ringBuffer.write(buffer, bytesRead);
         }
 
-        _pclose(pipe);
+        CloseHandle(hRead);
+        WaitForSingleObject(pi.hProcess, INFINITE);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+
         ringBuffer.setDone(true);
     }
 
