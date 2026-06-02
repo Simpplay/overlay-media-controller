@@ -28,12 +28,13 @@ namespace omc::application
 
 		// Optional parameters with defaults
 		bool skipUpdates = false;
+		const std::filesystem::path mediaStoragePath = "./media-storage";
+		const std::filesystem::path mediaThumbnailsPath = "./media-storage/thumbnails";
 	};
 
 	class OverlayMediaController
 	{
 	public:
-		void initialize(const OverlayMediaControllerConfig& config);
 		void close();
 
 		void toggleAutoStart(bool enable);
@@ -44,21 +45,25 @@ namespace omc::application
 
 		omc::event::EventBus eventBus;
 
-		omc::application::Updater updater{ eventBus };
+		omc::application::Updater updater;
 
-		std::shared_ptr<omc::ui::UiRepository> uiRepository = std::make_shared<omc::ui::UiRepository>();
-		std::unique_ptr<omc::ui::UiService> uiService = std::make_unique<omc::ui::UiService>(eventBus, uiRepository);
-		omc::ui::UiManager uiManager{ eventBus, uiRepository };
+		omc::ui::UiRepository uiRepository;
+		omc::ui::UiService uiService;
+		omc::ui::UiManager uiManager;
 
-		std::unique_ptr<omc::media::MediaManager> mediaManager = std::make_unique<omc::media::MediaManager>();
-		std::shared_ptr<omc::media::SqliteMediaRepository> mediaRepository = std::make_shared<omc::media::SqliteMediaRepository>("./media-storage", "./media-storage/thumbnails");
-		std::shared_ptr<omc::media::MediaService> mediaService = std::make_shared<omc::media::MediaService>(mediaRepository);
+		omc::media::MediaManager mediaManager;
+		omc::media::SqliteMediaRepository mediaRepository;
+		omc::media::MediaService mediaService;
 
-		std::shared_ptr<omc::soundboard::WasapiPlayer> soundboardPlayer = std::make_shared<omc::soundboard::WasapiPlayer>();
-		std::shared_ptr<omc::soundboard::SoundBoardService> soundboardService = std::make_shared<omc::soundboard::SoundBoardService>(soundboardPlayer, mediaRepository);
+		omc::soundboard::WasapiPlayer soundboardPlayer;
+		omc::soundboard::SoundBoardService soundboardService;
 
-		std::unique_ptr<omc::server::ApiServer> apiServer;
+		omc::server::ApiServer apiServer;
 
 		std::thread apiThread;
+
+	public:
+		OverlayMediaController(const OverlayMediaControllerConfig& config);
+		~OverlayMediaController() = default;
 	};
 }

@@ -59,13 +59,12 @@ int main(int argc, char* argv[])
         CLI11_PARSE(app, argc, argv);
 
         // Start the application with the validated configuration
-        omc::application::OverlayMediaController controller;
         omc::application::OverlayMediaControllerConfig config;
         config.dbPath = db_path;
         config.port = port;
         config.skipUpdates = skip_updates;
         
-        controller.initialize(config);
+        omc::application::OverlayMediaController controller{ config };
 
         CoUninitialize();
     } catch (const std::exception& e) {

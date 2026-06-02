@@ -107,12 +107,18 @@ http://localhost:8080
 
 # Health Check
 
-Used to verify that the HTTP server is running.
+Used to verify a service status. Defaults to `api`
+
+| Service | Description |
+| --- | --- |
+| `api` | Get the API http status |
+| `database` | Get the SQLite database status |
+| `ffmpeg` | Check if ffmpeg is installed |
 
 ## Request
 
 ```http
-GET /health
+GET /health/:service
 ```
 
 ## Response
@@ -124,6 +130,20 @@ GET /health
     "status": "ok"
 }
 ```
+
+---
+
+# Updates
+
+The program can self update if prompted via the endpoints.
+
+## Endpoints Summary
+
+| Method | Path | Description |
+| --- | ---| --- |
+| `GET` | `/api/updates/version` | Get the current version |
+| `GET` | `/api/updates/check` | Check for new version |
+| `PUT` | `/api/updates` | Update to latest version |
 
 ---
 

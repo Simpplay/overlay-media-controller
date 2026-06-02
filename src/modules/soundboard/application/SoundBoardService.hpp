@@ -10,7 +10,7 @@ namespace omc::soundboard
 	class SoundBoardService : public ISoundBoardService
 	{
 	public:
-		SoundBoardService(std::shared_ptr<ISoundboardPlayer> player, std::shared_ptr<omc::media::IMediaRepository> mediaRepository);
+		SoundBoardService(ISoundboardPlayer& player, omc::media::IMediaRepository& mediaRepository);
 		~SoundBoardService();
 
 		std::vector<SoundboardDeviceDto> getAudioDevices() const override;
@@ -19,7 +19,7 @@ namespace omc::soundboard
 		bool playMedia(int mediaId) override;
 
 	private:
-		std::shared_ptr<ISoundboardPlayer> player;
-		std::shared_ptr<omc::media::IMediaRepository> mediaRepository;
+		ISoundboardPlayer& player;
+		omc::media::IMediaRepository& mediaRepository;
 	};
 }

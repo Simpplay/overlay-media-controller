@@ -11,7 +11,7 @@ namespace omc::media
 	class MediaService : public IMediaService
 	{
 	public:
-		MediaService(std::shared_ptr<IMediaRepository> repository);
+		MediaService(IMediaRepository& repository);
 		~MediaService();
 
 		std::vector<MediaSourceDto> getAllMediaSources(const SearchMediaDto& searchDto) override;
@@ -41,6 +41,6 @@ namespace omc::media
 	private:
 		struct Impl;
 		std::unique_ptr<Impl> impl_;
-		std::shared_ptr<IMediaRepository> repository_;
+		IMediaRepository& repository_;
 	};
 }

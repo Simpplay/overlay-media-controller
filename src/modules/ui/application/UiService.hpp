@@ -12,7 +12,7 @@ namespace omc::ui
 	class UiService : public IUiService
 	{
 	public:
-		UiService(omc::event::EventBus& eventBus, std::shared_ptr<UiRepository> uiRepository);
+		UiService(omc::event::EventBus& eventBus, UiRepository& uiRepository);
 
 		std::vector<OverlayDto> getAllOverlays();
 
@@ -34,6 +34,6 @@ namespace omc::ui
 		std::unique_ptr<Impl> impl_;
 
 		omc::event::EventBus& eventBus;
-		std::shared_ptr<UiRepository> uiRepository;
+		UiRepository uiRepository;
 	};
 }

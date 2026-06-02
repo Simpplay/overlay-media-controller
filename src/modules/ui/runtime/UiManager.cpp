@@ -11,14 +11,14 @@ namespace omc::ui
 	void UiManager::render()
 	{
 		std::vector<DrawCommand> drawCommands;
-		uiRepository->renderWindows(drawCommands);
+		uiRepository.renderWindows(drawCommands);
 
 		renderer.render(drawCommands);
 	}
 
 	void UiManager::update()
 	{
-		uiRepository->updateWindows();
+		uiRepository.updateWindows();
 
 		renderer.update();
 	}
@@ -26,8 +26,8 @@ namespace omc::ui
 	void UiManager::handleWindowOpenRequestedEvent(const omc::event::WindowOpenRequestedEvent& event)
 	{
 		auto window = event.window->clone();
-		window->setZBase(MAX_Z_INDEX_PER_WINDOW + uiRepository->getWindowCount() * MAX_Z_INDEX_PER_WINDOW);
-		uiRepository->addWindow(std::move(window));
+		window->setZBase(MAX_Z_INDEX_PER_WINDOW + uiRepository.getWindowCount() * MAX_Z_INDEX_PER_WINDOW);
+		uiRepository.addWindow(std::move(window));
 	}
 
 	void UiManager::handleHideApplicationRequestedEvent(const omc::event::ApplicationHideRequestedEvent& event)

@@ -4,7 +4,7 @@
 
 namespace omc::soundboard
 {
-	SoundBoardService::SoundBoardService(std::shared_ptr<ISoundboardPlayer> player, std::shared_ptr<omc::media::IMediaRepository> mediaRepository) :
+	SoundBoardService::SoundBoardService(ISoundboardPlayer& player, omc::media::IMediaRepository& mediaRepository) :
 		player(player), mediaRepository(mediaRepository)
 	{
 
@@ -14,8 +14,8 @@ namespace omc::soundboard
 
 	std::vector<SoundboardDeviceDto> SoundBoardService::getAudioDevices() const
 	{
-		auto audioDevices = player->getAllAudioDevices();
-		int selectedDevice = player->getSelectedAudioDevice();
+		auto audioDevices = player.getAllAudioDevices();
+		int selectedDevice = player.getSelectedAudioDevice();
 		auto returnValue = std::vector<SoundboardDeviceDto>();
 
 		for (auto& device : audioDevices) {
@@ -31,12 +31,12 @@ namespace omc::soundboard
 
 	bool SoundBoardService::setAudioDevice(SetInputDeviceDto& deviceId)
 	{
-		return player->selectAudioDevice(deviceId.device_id);
+		return player.selectAudioDevice(deviceId.device_id);
 	}
 
 	bool SoundBoardService::playMedia(int mediaId)
 	{
-		auto media = mediaRepository->getMediaById(mediaId);
+		auto media = mediaRepository.getMediaById(mediaId);
 		if (!media) {
 			std::cerr << "Media with ID " << mediaId << " not found." << std::endl;
 			return false;
@@ -44,6 +44,6 @@ namespace omc::soundboard
 
 		std::string filepath = media->filepath;
 
-		return player->playSound(filepath);;
+		return player.playSound(filepath);;
 	}
 }

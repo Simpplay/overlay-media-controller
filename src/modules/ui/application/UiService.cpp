@@ -38,14 +38,14 @@ namespace omc::ui
 		}
 	};
 
-	UiService::UiService(omc::event::EventBus& eventBus, std::shared_ptr<UiRepository> uiRepository)
+	UiService::UiService(omc::event::EventBus& eventBus, UiRepository& uiRepository)
 		: impl_(std::make_unique<Impl>()), eventBus(eventBus), uiRepository(uiRepository)
 	{
 	}
 
 	std::vector<OverlayDto> UiService::getAllOverlays()
 	{
-		auto& windows = uiRepository->getWindows();
+		auto& windows = uiRepository.getWindows();
 		std::vector<OverlayDto> dtos;
 		for (const auto& [id, window] : windows) {
 			dtos.push_back(impl_->OverlayWindowToDto(id, *window));
@@ -63,7 +63,7 @@ namespace omc::ui
 		std::optional<float> sizeY
 	)
 	{
-		auto& windows = uiRepository->getWindows();
+		auto& windows = uiRepository.getWindows();
 		auto it = windows.find(id);
 		if (it == windows.end()) {
 			return {};
@@ -80,7 +80,7 @@ namespace omc::ui
 
 	std::optional<OverlayDto> UiService::getOverlayById(int id)
 	{
-		auto& windows = uiRepository->getWindows();
+		auto& windows = uiRepository.getWindows();
 		auto it = windows.find(id);
 		if (it == windows.end()) {
 			return {};
@@ -90,7 +90,7 @@ namespace omc::ui
 
 	bool UiService::deleteOverlayById(int id)
 	{
-		auto& windows = uiRepository->getWindows();
+		auto& windows = uiRepository.getWindows();
 		windows.erase(id);
 		return true;
 	}

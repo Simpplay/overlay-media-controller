@@ -18,7 +18,22 @@
 
 namespace omc::application
 {
-	void OverlayMediaController::initialize(const OverlayMediaControllerConfig& config)
+	OverlayMediaController::OverlayMediaController(const OverlayMediaControllerConfig& config) :
+		eventBus{},
+		updater{ eventBus },
+
+		uiRepository{},
+		uiService{ eventBus, uiRepository },
+		uiManager{ eventBus, uiRepository },
+
+		mediaManager{},
+		mediaRepository{ config.mediaStoragePath, config.mediaThumbnailsPath },
+		mediaService{ mediaRepository },
+
+		soundboardPlayer{},
+		soundboardService{ soundboardPlayer, mediaRepository },
+
+		apiServer{}
 	{
 		std::cout << "Initializing " << APP_NAME << " v" << APP_VERSION << " (" << APP_CHANNEL << ")\n";
 		std::cout << "Database: " << config.dbPath << "\n";
@@ -38,20 +53,19 @@ namespace omc::application
 
 		std::string dbError;
 		std::cout << "Setting up database...\n";
-		if (!mediaRepository->setupDatabase(config.dbPath, dbError)) {
+		if (!mediaRepository.setupDatabase(config.dbPath, dbError)) {
 			std::cerr << "Failed to setup database: " << config.dbPath << "\n";
 			std::cerr << "Error: " << dbError << "\n";
 			return;
 		}
 
 		std::cout << "Initializing managers...\n";
-		mediaManager->init(eventBus);
+		mediaManager.init(eventBus);
 		uiManager.init(&threadPool);
 
 		std::cout << "Starting API server on port " << config.port << "...\n";
-		apiServer = std::make_unique<omc::server::ApiServer>();
 		apiThread = std::thread([this, config]() {
-			apiServer->start(config.port, eventBus, *mediaService, *uiService, *soundboardService);
+			apiServer.start(config.port, eventBus, mediaService, uiService, soundboardService);
 		});
 
 		std::cout << "Listening on: http://127.0.0.1:" << config.port << "\n";
@@ -88,14 +102,12 @@ namespace omc::application
 	{
 		std::cout << "Closing " << APP_NAME << "...\n";
 
-		if (apiServer)
-			apiServer->stop();
+		apiServer.stop();
 
 		if (apiThread.joinable())
 			apiThread.join();
 
-		if (mediaRepository)
-			mediaRepository->closeDatabase();
+		mediaRepository.closeDatabase();
 
 		running = false;
 	}

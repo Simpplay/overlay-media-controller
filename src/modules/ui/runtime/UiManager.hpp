@@ -24,7 +24,7 @@ namespace omc::ui
 	class UiManager
 	{
 	public:
-		UiManager(omc::event::EventBus& eventBus, std::shared_ptr<UiRepository> uiRepository) : eventBus(eventBus), uiRepository(uiRepository), renderer(eventBus)
+		UiManager(omc::event::EventBus& eventBus, UiRepository& uiRepository) : eventBus(eventBus), uiRepository(uiRepository), renderer(eventBus)
 		{
 			eventBus.subscribe<omc::event::WindowOpenRequestedEvent>([this](const omc::event::WindowOpenRequestedEvent& event) {
 				handleWindowOpenRequestedEvent(event);
@@ -55,7 +55,7 @@ namespace omc::ui
 		void handleHideApplicationRequestedEvent(const omc::event::ApplicationHideRequestedEvent& event);
 		void handleShowApplicationRequestedEvent(const omc::event::ApplicationShowRequestedEvent& event);
 
-		std::shared_ptr<UiRepository> uiRepository;
+		UiRepository& uiRepository;
 
 		omc::shared::ThreadPool* threadPool{ nullptr };
 
